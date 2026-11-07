@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- In-car sizing, larger than phone defaults. Replace with Pleos design tokens when adopted. -->
+    <dimen name="touch_target">76dp</dimen>
+    <dimen name="screen_padding">24dp</dimen>
+    <dimen name="gap">16dp</dimen>
+</resources>

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="@dimen/screen_padding">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/app_name"
+            android:textAppearance="@style/TextAppearance.App.Headline" />
+
+        <TextView
+            android:id="@+id/driving_chip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/gap"
+            android:background="@drawable/bg_chip"
+            android:maxLines="1"
+            android:paddingHorizontal="20dp"
+            android:paddingVertical="12dp"
+            android:textAppearance="@style/TextAppearance.App.Label" />
+
+        <!-- Temporary control for demos. Remove with FakeDrivingStateSource. -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/toggle_driving"
+            style="@style/Widget.App.Button.Outlined"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/gap"
+            android:maxLines="1" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="@dimen/gap"
+        android:layout_weight="1">
+
+        <include
+            android:id="@+id/home_content"
+            layout="@layout/content_home" />
+
+        <include
+            android:id="@+id/nearby_content"
+            layout="@layout/view_nearby"
+            android:visibility="gone" />
+
+        <include
+            android:id="@+id/test_content"
+            layout="@layout/view_diagnosis_test"
+            android:visibility="gone" />
+    </FrameLayout>
+</LinearLayout>
