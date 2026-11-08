@@ -1,62 +1,125 @@
 package io.github.oyuha12.hyundaimotors.diagnosis;
 
 import androidx.annotation.Nullable;
+import io.github.oyuha12.hyundaimotors.R;
 import io.github.oyuha12.hyundaimotors.telemetry.VehicleSnapshot;
 import io.github.oyuha12.hyundaimotors.telemetry.VehicleSnapshot.Gear;
-import io.github.oyuha12.hyundaimotors.telemetry.VehicleSnapshot.Warning;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Iterator;
 
 /**
- * Rule-based screening of vehicle readings.
+ * Rule-based screening of vehicle readings. Thresholds are initial values for the demo and
+ * have not been validated on a real vehicle. This is a warning aid, not a safety system.
  *
- * <p>No API exposes the accelerator pedal, so unintended acceleration is inferred from its
- * observable effect: speed rising while the brake stays pressed. Thresholds are initial values
- * for the demo and have not been validated on a real vehicle. A steep downhill can match the
- * same pattern, so this is a warning aid, not a safety system.
+ * <ul>
+ *   <li>Unintended acceleration: no API exposes the accelerator pedal, so it is inferred from
+ *       speed rising while the brake stays pressed. A steep downhill can look the same.
+ *   <li>Accident: an airbag deploying while the app runs, or a speed drop sharper than
+ *       braking alone produces.
+ *   <li>Fire: the engine temperature warning, or cabin temperature both high and rising fast.
+ *       No smoke or flame sensor is available.
+ *   <li>Flooding: no sensor reports water, so it is never detected here.
+ * </ul>
  */
 public final class EmergencyDetector {
     static final long HISTORY_MILLIS = 5_000L;
     static final long ACCELERATION_WINDOW_MILLIS = 1_500L;
     static final float MIN_ACCELERATION_SPEED_KPH = 10f;
     static final float MIN_SPEED_GAIN_KPH = 5f;
-    static final long BRAKE_FAILURE_WINDOW_MILLIS = 3_000L;
-    static final float MIN_BRAKE_FAILURE_SPEED_KPH = 30f;
-    static final float MIN_EXPECTED_BRAKING_KPH = 1f;
     // Over 0.75 s this is about 1.3 g, beyond what the brakes alone produce on dry road.
     static final long COLLISION_WINDOW_MILLIS = 750L;
     static final float MIN_COLLISION_DROP_KPH = 35f;
+    static final long CABIN_WINDOW_MILLIS = 60_000L;
+    static final float MIN_FIRE_CABIN_C = 50f;
+    static final float MIN_FIRE_CABIN_RISE_C = 10f;
 
     private final Deque<VehicleSnapshot> history = new ArrayDeque<>();
+    private final Deque<VehicleSnapshot> cabinHistory = new ArrayDeque<>();
+
+    /**
+     * Only a change from "not deployed" to "deployed" counts. A value that is already
+     * "deployed" when the app starts says nothing about now: the Pleos emulator reports it that
+     * way by default, and a real vehicle may keep it after an old, repaired accident.
+     */
+    @Nullable private Boolean lastAirbagDeployed;
+    private boolean airbagAccidentActive;
 
     /** Adds a reading. Returns the most serious condition it shows, or null if none. */
     @Nullable
-    public EmergencyType evaluate(VehicleSnapshot snapshot) {
-        history.addLast(snapshot);
-        while (snapshot.timestampMillis - history.peekFirst().timestampMillis > HISTORY_MILLIS) {
-            history.removeFirst();
+    public Detection evaluate(VehicleSnapshot snapshot) {
+        remember(history, snapshot, HISTORY_MILLIS);
+        if (snapshot.cabinTemperatureC != null) {
+            remember(cabinHistory, snapshot, CABIN_WINDOW_MILLIS);
         }
 
-        if (isCollision(snapshot)) return EmergencyType.COLLISION_SUSPECTED;
-        if (isUnintendedAcceleration(snapshot)) return EmergencyType.UNINTENDED_ACCELERATION;
-        if (isBrakeFailure(snapshot)) return EmergencyType.BRAKE_FAILURE;
-        if (snapshot.warnings.contains(Warning.OVERHEAT)) return EmergencyType.OVERHEAT;
-        if (snapshot.warnings.contains(Warning.POWERTRAIN)) return EmergencyType.POWERTRAIN_FAULT;
-        if (snapshot.warnings.contains(Warning.SAFETY_SYSTEM)) {
-            return EmergencyType.SAFETY_SYSTEM_FAULT;
+        boolean airbagJustDeployed = Boolean.FALSE.equals(lastAirbagDeployed)
+                && Boolean.TRUE.equals(snapshot.airbagDeployed);
+        if (snapshot.airbagDeployed != null) lastAirbagDeployed = snapshot.airbagDeployed;
+        if (airbagJustDeployed || airbagAccidentActive) {
+            airbagAccidentActive = Boolean.TRUE.equals(snapshot.airbagDeployed);
+            if (airbagAccidentActive) {
+                return new Detection(EmergencyType.ACCIDENT, R.string.reason_airbag);
+            }
+        }
+        if (isSuddenStop(snapshot)) {
+            return new Detection(EmergencyType.ACCIDENT, R.string.reason_sudden_stop);
+        }
+        if (isUnintendedAcceleration(snapshot)) {
+            return new Detection(
+                    EmergencyType.UNINTENDED_ACCELERATION, R.string.reason_acceleration);
+        }
+        if (isCabinHeating(snapshot)) {
+            return new Detection(EmergencyType.FIRE, R.string.reason_cabin_heat);
+        }
+        if (snapshot.overheatWarning) {
+            return new Detection(EmergencyType.FIRE, R.string.reason_overheat);
         }
         return null;
     }
 
-    public void reset() {
-        history.clear();
+    /**
+     * Whether a condition raised by detection has gone away. Accidents never clear on their own:
+     * the vehicle stopping is part of a crash, not a sign that everyone is fine. Flooding is
+     * never detected, so it never clears either.
+     *
+     * @param current what evaluate() returned for the same reading
+     */
+    public boolean isBackToNormal(
+            EmergencyType type, VehicleSnapshot snapshot, @Nullable Detection current) {
+        switch (type) {
+            case UNINTENDED_ACCELERATION:
+                return current == null || current.type != EmergencyType.UNINTENDED_ACCELERATION;
+            case FIRE:
+                return !snapshot.overheatWarning
+                        && (snapshot.cabinTemperatureC == null
+                                || snapshot.cabinTemperatureC < MIN_FIRE_CABIN_C);
+            case ACCIDENT:
+            case FLOOD:
+            default:
+                return false;
+        }
     }
 
-    private boolean isCollision(VehicleSnapshot current) {
+    public void reset() {
+        history.clear();
+        cabinHistory.clear();
+        lastAirbagDeployed = null;
+        airbagAccidentActive = false;
+    }
+
+    private static void remember(Deque<VehicleSnapshot> readings, VehicleSnapshot latest, long keepMillis) {
+        readings.addLast(latest);
+        while (latest.timestampMillis - readings.peekFirst().timestampMillis > keepMillis) {
+            readings.removeFirst();
+        }
+    }
+
+    private boolean isSuddenStop(VehicleSnapshot current) {
         if (current.speedKph == null) return false;
         for (VehicleSnapshot earlier : history) {
-            boolean inWindow = current.timestampMillis - earlier.timestampMillis
-                    <= COLLISION_WINDOW_MILLIS;
+            boolean inWindow =
+                    current.timestampMillis - earlier.timestampMillis <= COLLISION_WINDOW_MILLIS;
             if (inWindow
                     && earlier.speedKph != null
                     && earlier.speedKph - current.speedKph >= MIN_COLLISION_DROP_KPH) {
@@ -79,14 +142,15 @@ public final class EmergencyDetector {
                 && current.speedKph - start.speedKph >= MIN_SPEED_GAIN_KPH;
     }
 
-    private boolean isBrakeFailure(VehicleSnapshot current) {
-        if (current.speedKph == null || current.speedKph < MIN_BRAKE_FAILURE_SPEED_KPH) {
+    private boolean isCabinHeating(VehicleSnapshot current) {
+        if (current.cabinTemperatureC == null || current.cabinTemperatureC < MIN_FIRE_CABIN_C) {
             return false;
         }
-        VehicleSnapshot start = brakeHeldSince(current, BRAKE_FAILURE_WINDOW_MILLIS);
-        return start != null
-                && start.speedKph != null
-                && start.speedKph - current.speedKph < MIN_EXPECTED_BRAKING_KPH;
+        float lowest = current.cabinTemperatureC;
+        for (VehicleSnapshot reading : cabinHistory) {
+            lowest = Math.min(lowest, reading.cabinTemperatureC);
+        }
+        return current.cabinTemperatureC - lowest >= MIN_FIRE_CABIN_RISE_C;
     }
 
     /**
@@ -95,13 +159,11 @@ public final class EmergencyDetector {
      */
     @Nullable
     private VehicleSnapshot brakeHeldSince(VehicleSnapshot current, long windowMillis) {
-        VehicleSnapshot start = null;
-        var readings = history.descendingIterator();
+        Iterator<VehicleSnapshot> readings = history.descendingIterator();
         while (readings.hasNext()) {
             VehicleSnapshot reading = readings.next();
             if (!Boolean.TRUE.equals(reading.brakePressed)) return null;
-            start = reading;
-            if (current.timestampMillis - reading.timestampMillis >= windowMillis) return start;
+            if (current.timestampMillis - reading.timestampMillis >= windowMillis) return reading;
         }
         return null;
     }

@@ -1,7 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- In-car sizing, larger than phone defaults. Replace with Pleos design tokens when adopted. -->
-    <dimen name="touch_target">76dp</dimen>
-    <dimen name="screen_padding">24dp</dimen>
+    <!-- 8dp grid. In-car sizing, larger than phone defaults. -->
+    <dimen name="touch_target">80dp</dimen>
+    <dimen name="situation_button_height">160dp</dimen>
+    <dimen name="screen_padding">32dp</dimen>
+    <dimen name="card_padding">32dp</dimen>
+    <dimen name="gap_small">8dp</dimen>
     <dimen name="gap">16dp</dimen>
+    <dimen name="gap_large">24dp</dimen>
+    <dimen name="section_gap">40dp</dimen>
+    <dimen name="corner_radius">24dp</dimen>
+    <dimen name="icon_size">32dp</dimen>
+    <dimen name="icon_size_large">56dp</dimen>
+    <dimen name="facility_icon_container">64dp</dimen>
+    <dimen name="step_symbol_size">128dp</dimen>
 </resources>

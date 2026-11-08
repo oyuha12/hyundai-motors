@@ -1,8 +1,11 @@
 package io.github.oyuha12.hyundaimotors.facility;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import io.github.oyuha12.hyundaimotors.diagnosis.EmergencyPlan;
 import io.github.oyuha12.hyundaimotors.diagnosis.EmergencyType;
 import io.github.oyuha12.hyundaimotors.facility.Facility.Type;
 import java.util.EnumSet;
@@ -40,17 +43,33 @@ public class SampleFacilityRepositoryTest {
     }
 
     @Test
-    public void recommendation_fitsTheCondition() {
-        assertEquals(
-                Type.SAFE_STOP,
-                repository.recommendedFor(
-                        EmergencyType.UNINTENDED_ACCELERATION, LATITUDE, LONGITUDE).type);
-        assertEquals(
-                Type.HOSPITAL,
-                repository.recommendedFor(
-                        EmergencyType.COLLISION_SUSPECTED, LATITUDE, LONGITUDE).type);
-        assertEquals(
-                Type.REPAIR_SHOP,
-                repository.recommendedFor(EmergencyType.OVERHEAT, LATITUDE, LONGITUDE).type);
+    public void everySituation_hasAnEvacuationTargetAndHelp() {
+        for (EmergencyType type : EmergencyType.values()) {
+            assertNotNull(type.name(), repository.nearest(
+                    EmergencyPlan.evacuationTarget(type), LATITUDE, LONGITUDE));
+            List<Facility> help = repository.nearestOfEach(
+                    EmergencyPlan.supportTypes(type), LATITUDE, LONGITUDE);
+            assertFalse(type.name(), help.isEmpty());
+            assertFalse(EmergencyPlan.steps(type).isEmpty());
+        }
+    }
+
+    @Test
+    public void everyStep_hasAPictureAndAMotion() {
+        for (EmergencyType type : EmergencyType.values()) {
+            for (io.github.oyuha12.hyundaimotors.diagnosis.GuidanceStep step
+                    : EmergencyPlan.steps(type)) {
+                assertTrue(type.name(), step.hasIcon() || (step.symbol != null && !step.symbol.isEmpty()));
+                assertNotNull(type.name(), step.motion);
+            }
+        }
+    }
+
+    @Test
+    public void fireAndFlood_sendPeopleToAnEvacuationSite() {
+        assertEquals(Type.EVACUATION_SITE, EmergencyPlan.evacuationTarget(EmergencyType.FIRE));
+        assertEquals(Type.EVACUATION_SITE, EmergencyPlan.evacuationTarget(EmergencyType.FLOOD));
+        assertEquals(Type.FIRE_STATION, EmergencyPlan.supportTypes(EmergencyType.FIRE).get(0));
+        assertEquals(Type.HOSPITAL, EmergencyPlan.supportTypes(EmergencyType.ACCIDENT).get(0));
     }
 }

@@ -10,9 +10,11 @@
 
     <com.google.android.material.navigationrail.NavigationRailView
         android:id="@+id/navigation"
-        android:layout_width="wrap_content"
+        android:layout_width="120dp"
         android:layout_height="match_parent"
         app:backgroundTint="@color/surface"
+        app:itemIconSize="@dimen/icon_size"
+        app:itemMinHeight="112dp"
         app:itemTextAppearanceActive="@style/TextAppearance.App.Nav"
         app:itemTextAppearanceInactive="@style/TextAppearance.App.Nav"
         app:labelVisibilityMode="labeled"

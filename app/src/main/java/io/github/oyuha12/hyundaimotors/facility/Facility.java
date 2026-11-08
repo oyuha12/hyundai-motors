@@ -1,7 +1,7 @@
 package io.github.oyuha12.hyundaimotors.facility;
 
 public final class Facility {
-    public enum Type { SAFE_STOP, FIRE_STATION, POLICE, HOSPITAL, REPAIR_SHOP }
+    public enum Type { SAFE_STOP, EVACUATION_SITE, FIRE_STATION, POLICE, HOSPITAL, REPAIR_SHOP }
 
     public final Type type;
     public final String name;

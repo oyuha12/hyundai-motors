@@ -1,15 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
     android:gravity="center_vertical"
-    android:minHeight="@dimen/touch_target"
-    android:orientation="horizontal">
+    android:minHeight="96dp"
+    android:orientation="horizontal"
+    android:paddingTop="@dimen/gap_small"
+    android:paddingBottom="@dimen/gap_small">
+
+    <FrameLayout
+        android:layout_width="@dimen/facility_icon_container"
+        android:layout_height="@dimen/facility_icon_container"
+        android:background="@drawable/bg_icon_circle"
+        android:backgroundTint="@color/surface_variant">
+
+        <ImageView
+            android:id="@+id/facility_icon"
+            android:layout_width="@dimen/icon_size"
+            android:layout_height="@dimen/icon_size"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            app:tint="@color/on_surface" />
+    </FrameLayout>
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/gap_large"
         android:layout_weight="1"
         android:orientation="vertical">
 
@@ -19,23 +37,23 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="1"
-            android:textAppearance="@style/TextAppearance.App.Body"
-            android:textColor="@color/on_background" />
+            android:textAppearance="@style/TextAppearance.App.BodyStrong" />
 
         <TextView
             android:id="@+id/facility_detail"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:ellipsize="end"
             android:maxLines="1"
-            android:textAppearance="@style/TextAppearance.App.BodySecondary"
-            android:textColor="@color/on_background" />
+            android:textAppearance="@style/TextAppearance.App.BodySecondary" />
     </LinearLayout>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/facility_route"
-        style="@style/Widget.App.Button"
+        style="@style/Widget.App.Button.Tonal"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/gap"
-        android:text="@string/route_button" />
+        android:text="@string/route_button"
+        app:icon="@drawable/ic_directions" />
 </LinearLayout>

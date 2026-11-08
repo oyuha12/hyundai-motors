@@ -34,10 +34,27 @@ public class ManifestSafetyTest {
         }
     }
 
+    /** No screen may open the dialer or send a message, including the situation screens. */
+    @Test
+    public void appCode_neverDialsOrMessages() throws Exception {
+        try (var files = Files.walk(new File("src/main/java").toPath())) {
+            for (var path : (Iterable<java.nio.file.Path>) files.filter(Files::isRegularFile)::iterator) {
+                String code = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
+                for (String forbidden : new String[] {
+                        "ACTION_CALL", "ACTION_DIAL", "tel:", "sms:", "SmsManager",
+                        "TelephonyManager", "ACTION_SENDTO"}) {
+                    assertFalse(path + " uses " + forbidden, code.contains(forbidden));
+                }
+            }
+        }
+    }
+
     @Test
     public void reports_stayInMemory() {
         MockEmergencyReporter reporter = new MockEmergencyReporter();
-        reporter.submit(EmergencyType.COLLISION_SUSPECTED, 1L, 37.5, 127.0, 0f);
-        assertEquals(1, reporter.getReports().size());
+        for (EmergencyType type : EmergencyType.values()) {
+            reporter.submit(type, 1L, 37.5, 127.0, 0f);
+        }
+        assertEquals(EmergencyType.values().length, reporter.getReports().size());
     }
 }

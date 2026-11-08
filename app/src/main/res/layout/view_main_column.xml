@@ -3,12 +3,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="@dimen/screen_padding">
+    android:paddingStart="@dimen/screen_padding"
+    android:paddingTop="@dimen/gap_large"
+    android:paddingEnd="@dimen/screen_padding"
+    android:paddingBottom="@dimen/gap_large">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
+        android:minHeight="@dimen/touch_target"
         android:orientation="horizontal">
 
         <TextView
@@ -18,33 +22,32 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:text="@string/app_name"
-            android:textAppearance="@style/TextAppearance.App.Headline" />
+            android:textAppearance="@style/TextAppearance.App.Title" />
+
+        <!-- Temporary control for demos. Remove with FakeDrivingStateSource. -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/toggle_driving"
+            style="@style/Widget.App.Button.Dev"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="1" />
 
         <TextView
             android:id="@+id/driving_chip"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/gap"
+            android:layout_marginStart="@dimen/gap_small"
             android:background="@drawable/bg_chip"
             android:maxLines="1"
             android:paddingHorizontal="20dp"
-            android:paddingVertical="12dp"
+            android:paddingVertical="10dp"
             android:textAppearance="@style/TextAppearance.App.Label" />
-
-        <!-- Temporary control for demos. Remove with FakeDrivingStateSource. -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/toggle_driving"
-            style="@style/Widget.App.Button.Outlined"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/gap"
-            android:maxLines="1" />
     </LinearLayout>
 
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="@dimen/gap"
+        android:layout_marginTop="@dimen/gap_large"
         android:layout_weight="1">
 
         <include

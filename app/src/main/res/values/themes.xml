@@ -3,110 +3,193 @@
     <style name="Theme.HyundaiMotors" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorPrimaryContainer">@color/primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/on_primary_container</item>
         <item name="colorSecondaryContainer">@color/secondary_container</item>
         <item name="colorOnSecondaryContainer">@color/on_secondary_container</item>
         <item name="colorSurface">@color/surface</item>
         <item name="colorOnSurface">@color/on_surface</item>
         <item name="colorOnSurfaceVariant">@color/on_surface_variant</item>
         <item name="colorOutline">@color/outline</item>
+        <item name="colorOutlineVariant">@color/outline</item>
         <item name="android:colorBackground">@color/background</item>
         <item name="colorOnBackground">@color/on_background</item>
+        <item name="android:fontFamily">@font/app_font</item>
+        <item name="fontFamily">@font/app_font</item>
     </style>
 
-    <style name="TextAppearance.App.Display" parent="TextAppearance.Material3.DisplayLarge">
-        <item name="android:textSize">72sp</item>
+    <!--
+        Type scale from the Pleos Connect typography guide (sp at 160 dpi):
+        Headline 48-60, Title 32-40, Body 26-30, Label 20-24.
+    -->
+    <style name="TextAppearance.App.Headline" parent="TextAppearance.Material3.DisplaySmall">
+        <item name="fontFamily">@font/app_font</item>
+        <item name="android:fontFamily">@font/app_font</item>
+        <item name="android:textSize">48sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">@color/primary</item>
+        <item name="android:textColor">@color/on_surface</item>
     </style>
 
-    <style name="TextAppearance.App.Headline" parent="TextAppearance.Material3.HeadlineMedium">
+    <style name="TextAppearance.App.TitleLarge" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="fontFamily">@font/app_font</item>
+        <item name="android:fontFamily">@font/app_font</item>
+        <item name="android:textSize">36sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/on_surface</item>
+    </style>
+
+    <style name="TextAppearance.App.Title" parent="TextAppearance.Material3.TitleLarge">
+        <item name="fontFamily">@font/app_font</item>
+        <item name="android:fontFamily">@font/app_font</item>
         <item name="android:textSize">32sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textColor">@color/on_background</item>
     </style>
 
-    <style name="TextAppearance.App.Title" parent="TextAppearance.Material3.TitleLarge">
-        <item name="android:textSize">28sp</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:textColor">@color/on_background</item>
-    </style>
-
     <style name="TextAppearance.App.Body" parent="TextAppearance.Material3.BodyLarge">
-        <item name="android:textSize">24sp</item>
+        <item name="fontFamily">@font/app_font</item>
+        <item name="android:fontFamily">@font/app_font</item>
+        <item name="android:textSize">28sp</item>
+        <item name="android:lineHeight">36sp</item>
+        <item name="android:textStyle">normal</item>
         <item name="android:textColor">@color/on_surface</item>
     </style>
 
+    <style name="TextAppearance.App.BodyStrong" parent="TextAppearance.App.Body">
+        <item name="android:textStyle">bold</item>
+    </style>
+
     <style name="TextAppearance.App.BodySecondary" parent="TextAppearance.App.Body">
+        <item name="android:textSize">26sp</item>
+        <item name="android:lineHeight">34sp</item>
         <item name="android:textColor">@color/on_surface_variant</item>
     </style>
 
     <style name="TextAppearance.App.Label" parent="TextAppearance.Material3.LabelLarge">
+        <item name="fontFamily">@font/app_font</item>
+        <item name="android:fontFamily">@font/app_font</item>
         <item name="android:textSize">24sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0</item>
     </style>
 
-    <style name="TextAppearance.App.Nav" parent="TextAppearance.Material3.LabelMedium">
+    <style name="TextAppearance.App.LabelSmall" parent="TextAppearance.App.Label">
         <item name="android:textSize">20sp</item>
     </style>
 
+    <style name="TextAppearance.App.Nav" parent="TextAppearance.App.LabelSmall" />
+
+    <style name="TextAppearance.App.SituationLabel" parent="TextAppearance.App.Label">
+        <item name="android:textSize">32sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="ShapeAppearance.App.Large" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/corner_radius</item>
+    </style>
+
+    <!-- Buttons -->
     <style name="Widget.App.Button" parent="Widget.Material3.Button">
         <item name="android:minHeight">@dimen/touch_target</item>
         <item name="android:insetTop">0dp</item>
         <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingStart">24dp</item>
+        <item name="android:paddingEnd">24dp</item>
         <item name="android:textAppearance">@style/TextAppearance.App.Label</item>
-    </style>
-
-    <style name="Widget.App.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
-        <item name="android:minHeight">@dimen/touch_target</item>
-        <item name="android:insetTop">0dp</item>
-        <item name="android:insetBottom">0dp</item>
-        <item name="android:textAppearance">@style/TextAppearance.App.Label</item>
+        <item name="iconSize">@dimen/icon_size</item>
+        <item name="iconPadding">12dp</item>
+        <item name="iconGravity">textStart</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.App.Large</item>
     </style>
 
     <style name="Widget.App.Button.Tonal" parent="Widget.Material3.Button.TonalButton">
         <item name="android:minHeight">@dimen/touch_target</item>
         <item name="android:insetTop">0dp</item>
         <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingStart">24dp</item>
+        <item name="android:paddingEnd">24dp</item>
         <item name="android:textAppearance">@style/TextAppearance.App.Label</item>
+        <item name="iconSize">@dimen/icon_size</item>
+        <item name="iconPadding">12dp</item>
+        <item name="iconGravity">textStart</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.App.Large</item>
     </style>
 
-    <style name="Widget.App.Button.Emergency" parent="Widget.Material3.Button">
+    <style name="Widget.App.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
         <item name="android:minHeight">@dimen/touch_target</item>
         <item name="android:insetTop">0dp</item>
         <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingStart">24dp</item>
+        <item name="android:paddingEnd">24dp</item>
         <item name="android:textAppearance">@style/TextAppearance.App.Label</item>
+        <item name="iconSize">@dimen/icon_size</item>
+        <item name="iconPadding">12dp</item>
+        <item name="iconGravity">textStart</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.App.Large</item>
+        <item name="strokeColor">@color/outline</item>
+    </style>
+
+    <!-- Developer-only control: kept small so it does not compete with real actions. -->
+    <style name="Widget.App.Button.Dev" parent="Widget.Material3.Button.TextButton">
+        <item name="android:minHeight">@dimen/touch_target</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:textAppearance">@style/TextAppearance.App.LabelSmall</item>
+        <item name="android:textColor">@color/on_surface_variant</item>
+    </style>
+
+    <style name="Widget.App.Button.Danger" parent="Widget.App.Button">
+        <item name="backgroundTint">@color/emergency_critical</item>
+        <item name="android:textColor">@color/on_emergency</item>
+        <item name="iconTint">@color/on_emergency</item>
+    </style>
+
+    <!-- Large situation buttons on the home screen, usable while driving. -->
+    <style name="Widget.App.Button.Situation" parent="Widget.App.Button.Danger">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:minHeight">@dimen/situation_button_height</item>
+        <item name="android:textAppearance">@style/TextAppearance.App.SituationLabel</item>
+        <item name="iconGravity">top</item>
+        <item name="iconSize">@dimen/icon_size_large</item>
+        <item name="iconPadding">@dimen/gap</item>
+    </style>
+
+    <!-- On the red emergency screen -->
+    <style name="Widget.App.Button.Emergency" parent="Widget.App.Button">
         <item name="backgroundTint">@color/on_emergency</item>
         <item name="android:textColor">@color/emergency_critical</item>
+        <item name="iconTint">@color/emergency_critical</item>
     </style>
 
-    <style name="Widget.App.Button.EmergencyOutlined" parent="Widget.Material3.Button.OutlinedButton">
-        <item name="android:minHeight">@dimen/touch_target</item>
-        <item name="android:insetTop">0dp</item>
-        <item name="android:insetBottom">0dp</item>
-        <item name="android:textAppearance">@style/TextAppearance.App.Label</item>
+    <style name="Widget.App.Button.EmergencyOutlined" parent="Widget.App.Button.Outlined">
         <item name="android:textColor">@color/on_emergency</item>
+        <item name="iconTint">@color/on_emergency</item>
         <item name="strokeColor">@color/on_emergency</item>
     </style>
 
-    <style name="Widget.App.Tile" parent="">
-        <item name="android:background">@drawable/bg_chip</item>
-        <item name="android:backgroundTint">@color/surface</item>
-        <item name="android:orientation">vertical</item>
-        <item name="android:padding">@dimen/gap</item>
-    </style>
-
-    <style name="TextAppearance.App.Emergency" parent="TextAppearance.App.Headline">
-        <item name="android:textSize">48sp</item>
-    </style>
-
-    <style name="TextAppearance.App.Step" parent="TextAppearance.App.Body">
-        <item name="android:textSize">36sp</item>
-        <item name="android:textStyle">bold</item>
-    </style>
-
+    <!-- Containers -->
     <style name="Widget.App.Card" parent="Widget.Material3.CardView.Filled">
         <item name="cardBackgroundColor">@color/surface</item>
         <item name="cardElevation">0dp</item>
         <item name="strokeWidth">0dp</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.App.Large</item>
+    </style>
+
+    <style name="Widget.App.CardContent" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:padding">@dimen/card_padding</item>
+    </style>
+
+    <style name="Widget.App.Metric" parent="">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
     </style>
 
     <style name="Widget.App.DetailRow" parent="">
@@ -115,5 +198,12 @@
         <item name="android:minHeight">@dimen/touch_target</item>
         <item name="android:gravity">center_vertical</item>
         <item name="android:orientation">horizontal</item>
+    </style>
+
+    <style name="Widget.App.RowIcon" parent="">
+        <item name="android:layout_width">@dimen/icon_size</item>
+        <item name="android:layout_height">@dimen/icon_size</item>
+        <item name="android:layout_marginEnd">@dimen/gap</item>
+        <item name="tint">@color/on_surface_variant</item>
     </style>
 </resources>

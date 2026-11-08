@@ -4,8 +4,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import io.github.oyuha12.hyundaimotors.telemetry.VehicleSnapshot.Gear;
-import io.github.oyuha12.hyundaimotors.telemetry.VehicleSnapshot.Warning;
-import java.util.EnumSet;
 
 /**
  * Replays an emergency for demos. An emulator cannot reproduce these conditions safely on its
@@ -14,10 +12,11 @@ import java.util.EnumSet;
 public final class SimulatedTelemetrySource implements TelemetrySource {
     public enum Scenario {
         UNINTENDED_ACCELERATION,
-        BRAKE_FAILURE,
         COLLISION,
-        OVERHEAT,
-        POWERTRAIN_FAULT
+        AIRBAG_DEPLOYED,
+        CABIN_FIRE,
+        /** Steady speed in one direction, for the drowsiness reminder. */
+        MONOTONOUS_DRIVE
     }
 
     private static final long TICK_MILLIS = 250L;
@@ -60,33 +59,40 @@ public final class SimulatedTelemetrySource implements TelemetrySource {
         float seconds = elapsedMillis / 1000f;
         float speed = 50f;
         boolean brake = false;
-        EnumSet<Warning> warnings = EnumSet.noneOf(Warning.class);
+        boolean airbag = false;
+        float cabin = 24f;
 
         switch (scenario) {
             case UNINTENDED_ACCELERATION:
                 brake = seconds >= 1f;
                 speed = seconds < 1f ? 40f : 40f + (seconds - 1f) * 8f;
                 break;
-            case BRAKE_FAILURE:
-                brake = seconds >= 1f;
-                break;
             case COLLISION:
                 speed = seconds < 1f ? 60f : Math.max(0f, 60f - (seconds - 1f) * 60f);
                 break;
-            case OVERHEAT:
-                if (seconds >= 1f) warnings.add(Warning.OVERHEAT);
+            case AIRBAG_DEPLOYED:
+                airbag = seconds >= 1f;
+                speed = seconds < 1f ? 30f : 0f;
                 break;
-            case POWERTRAIN_FAULT:
-                if (seconds >= 1f) warnings.add(Warning.POWERTRAIN);
+            case CABIN_FIRE:
+                speed = 0f;
+                cabin = seconds < 1f ? 24f : 24f + (seconds - 1f) * 5f;
+                break;
+            case MONOTONOUS_DRIVE:
+                speed = 90f;
                 break;
         }
         return new VehicleSnapshot(
                 timestampMillis,
                 speed,
                 brake,
-                Gear.DRIVE,
-                warnings,
+                speed > 0f ? Gear.DRIVE : Gear.PARK,
+                airbag,
+                cabin,
+                false,
                 SAMPLE_LATITUDE,
-                SAMPLE_LONGITUDE);
+                SAMPLE_LONGITUDE,
+                // A steady heading with a little natural wobble.
+                45f + (float) Math.sin(seconds) * 3f);
     }
 }

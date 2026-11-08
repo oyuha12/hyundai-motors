@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Narrow window: guidance first, then evacuation route and nearby help. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/emergency_overlay"
     android:layout_width="match_parent"
@@ -16,144 +17,12 @@
         android:orientation="vertical"
         android:padding="@dimen/screen_padding">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/mock_banner"
-            android:textAppearance="@style/TextAppearance.App.Label"
-            android:textColor="@color/on_emergency" />
+        <include layout="@layout/view_emergency_guidance" />
 
-        <TextView
-            android:id="@+id/emergency_title"
+        <include
+            layout="@layout/view_emergency_support"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textAppearance="@style/TextAppearance.App.Emergency"
-            android:textColor="@color/on_emergency" />
-
-        <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.App.Card"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/gap">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="@dimen/screen_padding">
-
-                <TextView
-                    android:id="@+id/emergency_symbol"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/bg_chip"
-                    android:backgroundTint="@color/emergency_critical"
-                    android:gravity="center"
-                    android:minWidth="120dp"
-                    android:minHeight="120dp"
-                    android:padding="12dp"
-                    android:textAppearance="@style/TextAppearance.App.Title"
-                    android:textColor="@color/on_emergency" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/screen_padding"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/emergency_counter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="@style/TextAppearance.App.BodySecondary" />
-
-                    <TextView
-                        android:id="@+id/emergency_step"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:maxLines="4"
-                        android:textAppearance="@style/TextAppearance.App.Step" />
-                </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <TextView
-            android:id="@+id/emergency_route_summary"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/gap"
-            android:textAppearance="@style/TextAppearance.App.Body"
-            android:textColor="@color/on_emergency" />
-
-        <TextView
-            android:id="@+id/emergency_route_status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textAppearance="@style/TextAppearance.App.Body"
-            android:textColor="@color/on_emergency"
-            android:visibility="gone" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/gap"
-            android:orientation="horizontal">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/emergency_report"
-                style="@style/Widget.App.Button.Emergency"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/emergency_report" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/emergency_route"
-                style="@style/Widget.App.Button.Emergency"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/gap"
-                android:layout_weight="1"
-                android:text="@string/emergency_route" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/emergency_report_status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/mock_report_done"
-            android:textAppearance="@style/TextAppearance.App.Body"
-            android:textColor="@color/on_emergency"
-            android:visibility="gone" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/gap"
-            android:orientation="horizontal">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/emergency_repeat"
-                style="@style/Widget.App.Button.EmergencyOutlined"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/emergency_repeat" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/emergency_dismiss"
-                style="@style/Widget.App.Button.EmergencyOutlined"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/gap"
-                android:layout_weight="1"
-                android:text="@string/emergency_dismiss" />
-        </LinearLayout>
+            android:layout_marginTop="@dimen/section_gap" />
     </LinearLayout>
 </ScrollView>

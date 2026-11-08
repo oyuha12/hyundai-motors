@@ -36,6 +36,7 @@ dependencies {
     implementation(libs.pleos.vehicle)
     implementation(libs.pleos.navihelper)
     implementation(libs.pleos.texttospeech)
+    implementation(libs.pleos.speechtotext)
     implementation(libs.pleos.fusedlocation)
 
     testImplementation(libs.junit)
