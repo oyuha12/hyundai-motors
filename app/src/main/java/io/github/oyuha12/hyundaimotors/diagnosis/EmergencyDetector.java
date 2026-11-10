@@ -19,7 +19,11 @@ import java.util.Iterator;
  *       braking alone produces.
  *   <li>Fire: the engine temperature warning, or cabin temperature both high and rising fast.
  *       No smoke or flame sensor is available.
- *   <li>Flooding: no sensor reports water, so it is never detected here.
+ *   <li>Brake failure: brake held at speed without slowing down, or a low brake fluid warning.
+ *   <li>Tire failure: a tire losing a quarter of its pressure within 10 s, as when a wheel
+ *       comes off or bursts.
+ *   <li>Flooding, driver health and secondary accidents: no sensor reports these, so they are
+ *       chosen by the user.
  * </ul>
  */
 public final class EmergencyDetector {
@@ -34,8 +38,17 @@ public final class EmergencyDetector {
     static final float MIN_FIRE_CABIN_C = 50f;
     static final float MIN_FIRE_CABIN_RISE_C = 10f;
 
+    static final long BRAKE_FAILURE_WINDOW_MILLIS = 3_000L;
+    static final float MIN_BRAKE_FAILURE_SPEED_KPH = 30f;
+    static final float MIN_EXPECTED_BRAKING_KPH = 1f;
+    static final float MOVING_SPEED_KPH = 5f;
+    static final long TIRE_WINDOW_MILLIS = 10_000L;
+    /** A quarter of a tire's pressure gone within the window: a puncture, not slow leakage. */
+    static final float MIN_TIRE_PRESSURE_DROP_RATIO = 0.25f;
+
     private final Deque<VehicleSnapshot> history = new ArrayDeque<>();
     private final Deque<VehicleSnapshot> cabinHistory = new ArrayDeque<>();
+    private final Deque<VehicleSnapshot> tireHistory = new ArrayDeque<>();
 
     /**
      * Only a change from "not deployed" to "deployed" counts. A value that is already
@@ -52,6 +65,7 @@ public final class EmergencyDetector {
         if (snapshot.cabinTemperatureC != null) {
             remember(cabinHistory, snapshot, CABIN_WINDOW_MILLIS);
         }
+        remember(tireHistory, snapshot, TIRE_WINDOW_MILLIS);
 
         boolean airbagJustDeployed = Boolean.FALSE.equals(lastAirbagDeployed)
                 && Boolean.TRUE.equals(snapshot.airbagDeployed);
@@ -68,6 +82,15 @@ public final class EmergencyDetector {
         if (isUnintendedAcceleration(snapshot)) {
             return new Detection(
                     EmergencyType.UNINTENDED_ACCELERATION, R.string.reason_acceleration);
+        }
+        if (isBrakeNotSlowing(snapshot)) {
+            return new Detection(EmergencyType.BRAKE_FAILURE, R.string.reason_brake_no_effect);
+        }
+        if (snapshot.brakeFluidLow && isMoving(snapshot)) {
+            return new Detection(EmergencyType.BRAKE_FAILURE, R.string.reason_brake_fluid);
+        }
+        if (hasSuddenTirePressureLoss(snapshot)) {
+            return new Detection(EmergencyType.TIRE_FAILURE, R.string.reason_tire_pressure);
         }
         if (isCabinHeating(snapshot)) {
             return new Detection(EmergencyType.FIRE, R.string.reason_cabin_heat);
@@ -94,8 +117,12 @@ public final class EmergencyDetector {
                 return !snapshot.overheatWarning
                         && (snapshot.cabinTemperatureC == null
                                 || snapshot.cabinTemperatureC < MIN_FIRE_CABIN_C);
+            case BRAKE_FAILURE:
+                return !snapshot.brakeFluidLow
+                        && (current == null || current.type != EmergencyType.BRAKE_FAILURE);
             case ACCIDENT:
             case FLOOD:
+            case TIRE_FAILURE: // Lost pressure does not come back by itself.
             default:
                 return false;
         }
@@ -104,6 +131,7 @@ public final class EmergencyDetector {
     public void reset() {
         history.clear();
         cabinHistory.clear();
+        tireHistory.clear();
         lastAirbagDeployed = null;
         airbagAccidentActive = false;
     }
@@ -140,6 +168,36 @@ public final class EmergencyDetector {
         return start != null
                 && start.speedKph != null
                 && current.speedKph - start.speedKph >= MIN_SPEED_GAIN_KPH;
+    }
+
+    /** Brake held for 3 s at speed, yet the car is not slowing down. */
+    private boolean isBrakeNotSlowing(VehicleSnapshot current) {
+        if (current.speedKph == null || current.speedKph < MIN_BRAKE_FAILURE_SPEED_KPH) {
+            return false;
+        }
+        VehicleSnapshot start = brakeHeldSince(current, BRAKE_FAILURE_WINDOW_MILLIS);
+        return start != null
+                && start.speedKph != null
+                && start.speedKph - current.speedKph < MIN_EXPECTED_BRAKING_KPH;
+    }
+
+    private static boolean isMoving(VehicleSnapshot current) {
+        return current.speedKph != null && current.speedKph >= MOVING_SPEED_KPH;
+    }
+
+    private boolean hasSuddenTirePressureLoss(VehicleSnapshot current) {
+        for (int wheel = 0; wheel < 4; wheel++) {
+            Float now = current.tirePressure(wheel);
+            if (now == null) continue;
+            for (VehicleSnapshot earlier : tireHistory) {
+                Float before = earlier.tirePressure(wheel);
+                if (before != null && before > 0
+                        && (before - now) / before >= MIN_TIRE_PRESSURE_DROP_RATIO) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private boolean isCabinHeating(VehicleSnapshot current) {

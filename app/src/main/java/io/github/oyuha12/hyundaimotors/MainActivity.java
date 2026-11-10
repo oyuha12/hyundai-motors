@@ -10,12 +10,15 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.navigation.NavigationBarView;
+import io.github.oyuha12.hyundaimotors.demo.RouteDemoOverlay;
 import io.github.oyuha12.hyundaimotors.diagnosis.EmergencyType;
 import io.github.oyuha12.hyundaimotors.facility.Facility;
 import io.github.oyuha12.hyundaimotors.facility.RouteNavigator;
@@ -64,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView nearbyNotice;
     private TextView routeStatus;
     private ConfirmOverlay confirmOverlay;
+    private RouteDemoOverlay routeDemo;
     private View drowsyBanner;
     private TextView drowsyText;
 
@@ -85,13 +89,37 @@ public class MainActivity extends AppCompatActivity {
         addContentView(confirmView, confirmView.getLayoutParams());
         confirmOverlay = new ConfirmOverlay(confirmView, viewModel);
 
+        // Added last so it shows above the situation screen, which keeps running underneath.
+        View routeDemoView = LayoutInflater.from(this)
+                .inflate(R.layout.view_route_demo, (ViewGroup) findViewById(android.R.id.content), false);
+        addContentView(routeDemoView, routeDemoView.getLayoutParams());
+        routeDemo = new RouteDemoOverlay(routeDemoView, viewModel::say);
+
         bindActions();
+        bindDemoSettings();
         observe();
         requestMissingPermissions();
 
         NavigationBarView navigation = findViewById(R.id.navigation);
         navigation.setOnItemSelectedListener(this::onDestinationSelected);
         navigation.setSelectedItemId(viewModel.getSelectedDestination());
+    }
+
+    private void bindDemoSettings() {
+        MaterialSwitch demoRoute = findViewById(R.id.switch_demo_route);
+        demoRoute.setChecked(viewModel.isDemoRouteEnabled());
+        demoRoute.setOnCheckedChangeListener((button, checked) -> viewModel.setDemoRouteEnabled(checked));
+        MaterialSwitch demoLocation = findViewById(R.id.switch_demo_location);
+        demoLocation.setChecked(viewModel.isDemoLocationEnabled());
+        demoLocation.setOnCheckedChangeListener((button, checked) -> {
+            viewModel.setDemoLocationEnabled(checked);
+            renderFacilities();
+        });
+        viewModel.getDemoRouteRequest().observe(this, facility -> {
+            if (facility == null) return;
+            routeDemo.show(facility);
+            viewModel.onDemoRouteShown();
+        });
     }
 
     private void bindViews() {
@@ -132,10 +160,19 @@ public class MainActivity extends AppCompatActivity {
         bindSituation(R.id.select_accident, EmergencyType.ACCIDENT);
         bindSituation(R.id.select_fire, EmergencyType.FIRE);
         bindSituation(R.id.select_flood, EmergencyType.FLOOD);
+        bindSituation(R.id.select_brake, EmergencyType.BRAKE_FAILURE);
+        bindSituation(R.id.select_tire, EmergencyType.TIRE_FAILURE);
+        bindSituation(R.id.select_health, EmergencyType.DRIVER_HEALTH);
+        bindSituation(R.id.select_secondary, EmergencyType.SECONDARY_ACCIDENT);
         bindScenario(R.id.scenario_ua, Scenario.UNINTENDED_ACCELERATION);
         bindScenario(R.id.scenario_collision, Scenario.COLLISION);
         bindScenario(R.id.scenario_airbag, Scenario.AIRBAG_DEPLOYED);
         bindScenario(R.id.scenario_fire, Scenario.CABIN_FIRE);
+        bindScenario(R.id.scenario_brake, Scenario.BRAKE_FAILURE);
+        bindScenario(R.id.scenario_tire, Scenario.TIRE_PRESSURE_LOSS);
+        bindScenario(R.id.scenario_pedal, Scenario.PEDAL_MISAPPLICATION);
+        bindScenario(R.id.scenario_reverse, Scenario.FAST_REVERSE);
+        bindScenario(R.id.scenario_curve, Scenario.CURVE_OVERSPEED);
         bindScenario(R.id.scenario_drowsy, Scenario.MONOTONOUS_DRIVE);
         findViewById(R.id.scenario_stop).setOnClickListener(view -> viewModel.stopScenario());
         findViewById(R.id.drowsy_close).setOnClickListener(view -> viewModel.dismissDrowsinessAlert());
@@ -154,12 +191,15 @@ public class MainActivity extends AppCompatActivity {
         viewModel.getSnapshot().observe(this, this::renderSnapshot);
         viewModel.getEmergency().observe(this, this::renderEmergency);
         viewModel.getStepIndex().observe(this, overlay::showStep);
-        detailReports.setText(getString(R.string.mock_report_count, viewModel.getMockReportCount()));
+        setDetail(detailReports, getString(R.string.mock_report_count, viewModel.getMockReportCount()));
         viewModel.getLastReport().observe(this, report -> {
             overlay.showReport(report);
-            detailReports.setText(getString(R.string.mock_report_count, viewModel.getMockReportCount()));
+            setDetail(detailReports, getString(R.string.mock_report_count, viewModel.getMockReportCount()));
         });
+        viewModel.getEventRecordCount().observe(this, count ->
+                setDetail(findViewById(R.id.detail_events), getString(R.string.event_count, count)));
         viewModel.getRouteStatus().observe(this, this::renderRouteStatus);
+        viewModel.getDispatches().observe(this, overlay::showDispatches);
         viewModel.getVoiceStatus().observe(this, confirmOverlay::showVoiceStatus);
         viewModel.getCountdown().observe(this, confirmOverlay::showCountdown);
         viewModel.getDrowsinessAlert().observe(this, this::renderDrowsinessAlert);
@@ -206,7 +246,7 @@ public class MainActivity extends AppCompatActivity {
         nearbyNotice.setText(viewModel.hasRealLocation()
                 ? R.string.nearby_notice_real_location
                 : R.string.nearby_notice_sample_location);
-        FacilityUi.fillList(facilityList, viewModel.nearbyFacilities(), viewModel::navigateTo);
+        FacilityUi.fillList(facilityList, viewModel.nearbyFacilities(), viewModel::navigateTo, null);
     }
 
     private void renderEmergency(MainViewModel.ActiveEmergency active) {
@@ -218,10 +258,10 @@ public class MainActivity extends AppCompatActivity {
         boolean normal = active == null;
         coreValue.setText(normal ? R.string.status_normal : R.string.status_alert);
         coreValue.setTextColor(ContextCompat.getColor(
-                this, normal ? R.color.on_surface : R.color.emergency_critical));
+                this, normal ? R.color.on_surface : R.color.negative));
         statusIcon.setImageResource(normal ? R.drawable.ic_check_circle : R.drawable.ic_warning);
         statusIcon.setImageTintList(ColorStateList.valueOf(ContextCompat.getColor(
-                this, normal ? R.color.success : R.color.emergency_critical)));
+                this, normal ? R.color.success : R.color.negative)));
     }
 
     private void renderSnapshot(VehicleSnapshot snapshot) {
@@ -232,12 +272,19 @@ public class MainActivity extends AppCompatActivity {
         tileBrake.setText(snapshot.brakePressed == null
                 ? getString(R.string.value_unknown)
                 : getString(snapshot.brakePressed ? R.string.brake_on : R.string.brake_off));
-        detailLocation.setText(snapshot.hasLocation()
+        setDetail(detailLocation, viewModel.isDemoLocationEnabled()
+                ? getString(R.string.demo_location_label)
+                : snapshot.hasLocation()
                 ? String.format(Locale.US, "%.4f, %.4f", snapshot.latitude, snapshot.longitude)
                 : getString(R.string.value_unknown));
-        detailCabin.setText(snapshot.cabinTemperatureC == null
+        setDetail(detailCabin, snapshot.cabinTemperatureC == null
                 ? getString(R.string.value_unknown)
                 : getString(R.string.temperature_c, Math.round(snapshot.cabinTemperatureC)));
+    }
+
+    /** The detail pane exists only in wide windows. */
+    private static void setDetail(@Nullable TextView view, String text) {
+        if (view != null) view.setText(text);
     }
 
     private static String gearLabel(VehicleSnapshot.Gear gear) {

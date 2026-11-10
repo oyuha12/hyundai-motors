@@ -15,8 +15,14 @@ public final class SimulatedTelemetrySource implements TelemetrySource {
         COLLISION,
         AIRBAG_DEPLOYED,
         CABIN_FIRE,
+        BRAKE_FAILURE,
+        TIRE_PRESSURE_LOSS,
         /** Steady speed in one direction, for the drowsiness reminder. */
-        MONOTONOUS_DRIVE
+        MONOTONOUS_DRIVE,
+        // Driver mistake warnings: voice only, never an emergency screen.
+        PEDAL_MISAPPLICATION,
+        FAST_REVERSE,
+        CURVE_OVERSPEED
     }
 
     private static final long TICK_MILLIS = 250L;
@@ -61,8 +67,31 @@ public final class SimulatedTelemetrySource implements TelemetrySource {
         boolean brake = false;
         boolean airbag = false;
         float cabin = 24f;
+        Gear gear = null;
+        float frontLeftTire = 230f; // kPa
+        Float steering = 0f;
 
         switch (scenario) {
+            case BRAKE_FAILURE:
+                brake = seconds >= 1f;
+                speed = 60f;
+                break;
+            case TIRE_PRESSURE_LOSS:
+                speed = 80f;
+                frontLeftTire = seconds < 2f ? 230f : Math.max(0f, 230f - (seconds - 2f) * 60f);
+                break;
+            case PEDAL_MISAPPLICATION:
+                speed = seconds < 1f ? 0f : Math.min(40f, (seconds - 1f) * 25f);
+                gear = Gear.DRIVE;
+                break;
+            case FAST_REVERSE:
+                speed = Math.min(20f, seconds * 10f);
+                gear = Gear.REVERSE;
+                break;
+            case CURVE_OVERSPEED:
+                speed = 80f;
+                steering = seconds < 1f ? 0f : 150f;
+                break;
             case UNINTENDED_ACCELERATION:
                 brake = seconds >= 1f;
                 speed = seconds < 1f ? 40f : 40f + (seconds - 1f) * 8f;
@@ -86,13 +115,14 @@ public final class SimulatedTelemetrySource implements TelemetrySource {
                 timestampMillis,
                 speed,
                 brake,
-                speed > 0f ? Gear.DRIVE : Gear.PARK,
+                gear != null ? gear : speed > 0f ? Gear.DRIVE : Gear.PARK,
                 airbag,
                 cabin,
                 false,
                 SAMPLE_LATITUDE,
                 SAMPLE_LONGITUDE,
                 // A steady heading with a little natural wobble.
-                45f + (float) Math.sin(seconds) * 3f);
+                45f + (float) Math.sin(seconds) * 3f)
+                .withChassis(false, new float[] {frontLeftTire, 230f, 230f, 230f}, steering);
     }
 }

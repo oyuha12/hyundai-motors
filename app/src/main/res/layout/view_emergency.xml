@@ -4,7 +4,7 @@
     android:id="@+id/emergency_overlay"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/emergency_critical"
+    android:background="@color/background"
     android:clickable="true"
     android:fillViewport="true"
     android:fitsSystemWindows="true"

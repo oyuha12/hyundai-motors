@@ -7,7 +7,10 @@ import ai.pleos.playground.vehicle.Vehicle;
 import ai.pleos.playground.vehicle.api.model.area.SeatArea;
 import ai.pleos.playground.vehicle.api.model.telltale.TelltaleData;
 import ai.pleos.playground.vehicle.api.model.telltale.Telltales;
+import ai.pleos.playground.vehicle.api.model.area.WheelArea;
 import ai.pleos.playground.vehicle.constant.area.SeatValue;
+import ai.pleos.playground.vehicle.constant.area.WheelValue;
+import ai.pleos.playground.vehicle.constant.control.OilLevelState;
 import ai.pleos.playground.vehicle.constant.control.VehicleGear;
 import ai.pleos.playground.vehicle.constant.telltale.TelltaleState;
 import ai.pleos.playground.vehicle.constant.telltale.TelltaleType;
@@ -15,7 +18,10 @@ import ai.pleos.playground.vehicle.listener.BrakePedalStatusListener;
 import ai.pleos.playground.vehicle.listener.GearSelectionListener;
 import ai.pleos.playground.vehicle.listener.HvacTemperatureListener;
 import ai.pleos.playground.vehicle.listener.SeatAirbagDeployedListener;
+import ai.pleos.playground.vehicle.listener.OilLevelStateListener;
+import ai.pleos.playground.vehicle.listener.SteeringWheelAngleListener;
 import ai.pleos.playground.vehicle.listener.TelltaleInfoListener;
+import ai.pleos.playground.vehicle.listener.TirePressureListener;
 import android.car.Car;
 import android.car.VehiclePropertyIds;
 import android.car.hardware.CarPropertyValue;
@@ -65,6 +71,9 @@ public final class PleosTelemetrySource implements TelemetrySource {
     @Nullable private Double latitude;
     @Nullable private Double longitude;
     @Nullable private Float headingDegrees;
+    private boolean brakeFluidLow;
+    private float[] tirePressures = {Float.NaN, Float.NaN, Float.NaN, Float.NaN};
+    @Nullable private Float steeringAngleDegrees;
 
     private final Runnable publish = new Runnable() {
         @Override
@@ -79,10 +88,53 @@ public final class PleosTelemetrySource implements TelemetrySource {
                     overheatWarning,
                     latitude,
                     longitude,
-                    headingDegrees));
+                    headingDegrees).withChassis(brakeFluidLow, tirePressures, steeringAngleDegrees));
             handler.postDelayed(this, PUBLISH_MILLIS);
         }
     };
+
+    private final OilLevelStateListener brakeFluidListener = new OilLevelStateListener() {
+        @Override
+        public void onOilLevelUpdated(OilLevelState state) {
+            boolean low = state == OilLevelState.LOW || state == OilLevelState.CRITICALLY_LOW;
+            runOnMain(() -> brakeFluidLow = low);
+        }
+
+        @Override
+        public void onFailed(Exception error) {
+            Log.w(TAG, "Brake fluid level unavailable", error);
+        }
+    };
+
+    private final SteeringWheelAngleListener steeringListener = new SteeringWheelAngleListener() {
+        @Override
+        public void onSteeringWheelAngleUpdated(Float degrees) {
+            runOnMain(() -> steeringAngleDegrees = degrees);
+        }
+
+        @Override
+        public void onFailed(Exception error) {
+            Log.w(TAG, "Steering angle unavailable", error);
+        }
+    };
+
+    private TirePressureListener tireListener(int wheel) {
+        return new TirePressureListener() {
+            @Override
+            public void onTirePressureUpdated(Float pressure) {
+                runOnMain(() -> {
+                    float[] updated = tirePressures.clone();
+                    updated[wheel] = pressure == null ? Float.NaN : pressure;
+                    tirePressures = updated;
+                });
+            }
+
+            @Override
+            public void onFailed(Exception error) {
+                Log.w(TAG, "Tire pressure unavailable", error);
+            }
+        };
+    }
 
     private final BrakePedalStatusListener brakeListener = new BrakePedalStatusListener() {
         @Override
@@ -226,6 +278,18 @@ public final class PleosTelemetrySource implements TelemetrySource {
         pendingRegistrations.add(
                 () -> vehicle.getHVAC().registerHvacTemperatureCurrent(driverSeat, cabinListener));
         pendingRegistrations.add(() -> vehicle.getSafety().registerTelltales(telltaleListener));
+        pendingRegistrations.add(
+                () -> vehicle.getSafety().registerBrakeFluidLevelState(brakeFluidListener));
+        pendingRegistrations.add(
+                () -> vehicle.getSteeringWheel().registerSteeringWheelAngle(steeringListener));
+        WheelValue[] wheels = {
+            WheelValue.LEFT_FRONT, WheelValue.RIGHT_FRONT, WheelValue.LEFT_REAR, WheelValue.RIGHT_REAR
+        };
+        for (int i = 0; i < wheels.length; i++) {
+            WheelArea area = new WheelArea(wheels[i]);
+            TirePressureListener listener = tireListener(i);
+            pendingRegistrations.add(() -> vehicle.getTire().registerTirePressure(area, listener));
+        }
         handler.postDelayed(this::registerVehicleListeners, VEHICLE_RETRY_MILLIS);
     }
 

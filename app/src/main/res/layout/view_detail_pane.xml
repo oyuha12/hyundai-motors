@@ -96,6 +96,32 @@
                     android:textAppearance="@style/TextAppearance.App.BodySecondary" />
             </LinearLayout>
 
+            <com.google.android.material.divider.MaterialDivider
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:dividerColor="@color/outline" />
+
+            <LinearLayout style="@style/Widget.App.DetailRow">
+
+                <ImageView
+                    style="@style/Widget.App.RowIcon"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_history" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/detail_events_label"
+                    android:textAppearance="@style/TextAppearance.App.Body" />
+
+                <TextView
+                    android:id="@+id/detail_events"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="@style/TextAppearance.App.BodySecondary" />
+            </LinearLayout>
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/open_nearby"
                 style="@style/Widget.App.Button.Tonal"

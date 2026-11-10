@@ -12,6 +12,10 @@
         <item name="colorOnSurfaceVariant">@color/on_surface_variant</item>
         <item name="colorOutline">@color/outline</item>
         <item name="colorOutlineVariant">@color/outline</item>
+        <item name="colorSurfaceVariant">@color/surface_variant</item>
+        <item name="colorSurfaceContainer">@color/surface</item>
+        <item name="colorSurfaceContainerHigh">@color/surface</item>
+        <item name="colorError">@color/negative</item>
         <item name="android:colorBackground">@color/background</item>
         <item name="colorOnBackground">@color/on_background</item>
         <item name="android:fontFamily">@font/app_font</item>
@@ -89,7 +93,11 @@
         <item name="cornerSize">@dimen/corner_radius</item>
     </style>
 
-    <!-- Buttons -->
+    <!--
+        Buttons, after the Pleos basic button: no outlines or shadows, rounded rectangles.
+        Filled = button_filled (dark gray), Tonal = button_basic (light gray).
+        Red is kept for emergency actions only.
+    -->
     <style name="Widget.App.Button" parent="Widget.Material3.Button">
         <item name="android:minHeight">@dimen/touch_target</item>
         <item name="android:insetTop">0dp</item>
@@ -101,6 +109,10 @@
         <item name="iconPadding">12dp</item>
         <item name="iconGravity">textStart</item>
         <item name="shapeAppearance">@style/ShapeAppearance.App.Large</item>
+        <item name="elevation">0dp</item>
+        <item name="backgroundTint">@color/button_filled</item>
+        <item name="android:textColor">@color/on_button_filled</item>
+        <item name="iconTint">@color/on_button_filled</item>
     </style>
 
     <style name="Widget.App.Button.Tonal" parent="Widget.Material3.Button.TonalButton">
@@ -114,20 +126,14 @@
         <item name="iconPadding">12dp</item>
         <item name="iconGravity">textStart</item>
         <item name="shapeAppearance">@style/ShapeAppearance.App.Large</item>
+        <item name="elevation">0dp</item>
+        <item name="backgroundTint">@color/secondary_container</item>
+        <item name="android:textColor">@color/on_secondary_container</item>
+        <item name="iconTint">@color/on_secondary_container</item>
     </style>
 
-    <style name="Widget.App.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
-        <item name="android:minHeight">@dimen/touch_target</item>
-        <item name="android:insetTop">0dp</item>
-        <item name="android:insetBottom">0dp</item>
-        <item name="android:paddingStart">24dp</item>
-        <item name="android:paddingEnd">24dp</item>
-        <item name="android:textAppearance">@style/TextAppearance.App.Label</item>
-        <item name="iconSize">@dimen/icon_size</item>
-        <item name="iconPadding">12dp</item>
-        <item name="iconGravity">textStart</item>
-        <item name="shapeAppearance">@style/ShapeAppearance.App.Large</item>
-        <item name="strokeColor">@color/outline</item>
+    <!-- Pleos has no outlined button, so this is the basic (gray) button too. -->
+    <style name="Widget.App.Button.Outlined" parent="Widget.App.Button.Tonal">
     </style>
 
     <!-- Developer-only control: kept small so it does not compete with real actions. -->
@@ -145,30 +151,28 @@
         <item name="iconTint">@color/on_emergency</item>
     </style>
 
-    <!-- Large situation buttons on the home screen, usable while driving. -->
-    <style name="Widget.App.Button.Situation" parent="Widget.App.Button.Danger">
+    <!--
+        Large situation tiles on the home screen, usable while driving.
+        Neutral tiles with a red icon, like the Pleos home widgets.
+    -->
+    <style name="Widget.App.Button.Situation" parent="Widget.App.Button.Tonal">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_weight">1</item>
         <item name="android:minHeight">@dimen/situation_button_height</item>
         <item name="android:textAppearance">@style/TextAppearance.App.SituationLabel</item>
+        <item name="backgroundTint">@color/surface</item>
+        <item name="android:textColor">@color/on_surface</item>
+        <item name="iconTint">@color/negative</item>
         <item name="iconGravity">top</item>
         <item name="iconSize">@dimen/icon_size_large</item>
         <item name="iconPadding">@dimen/gap</item>
     </style>
 
-    <!-- On the red emergency screen -->
-    <style name="Widget.App.Button.Emergency" parent="Widget.App.Button">
-        <item name="backgroundTint">@color/on_emergency</item>
-        <item name="android:textColor">@color/emergency_critical</item>
-        <item name="iconTint">@color/emergency_critical</item>
-    </style>
+    <!-- Emergency screen: main action in red, others in Pleos gray. -->
+    <style name="Widget.App.Button.Emergency" parent="Widget.App.Button.Danger" />
 
-    <style name="Widget.App.Button.EmergencyOutlined" parent="Widget.App.Button.Outlined">
-        <item name="android:textColor">@color/on_emergency</item>
-        <item name="iconTint">@color/on_emergency</item>
-        <item name="strokeColor">@color/on_emergency</item>
-    </style>
+    <style name="Widget.App.Button.EmergencyOutlined" parent="Widget.App.Button.Tonal" />
 
     <!-- Containers -->
     <style name="Widget.App.Card" parent="Widget.Material3.CardView.Filled">
@@ -176,6 +180,17 @@
         <item name="cardElevation">0dp</item>
         <item name="strokeWidth">0dp</item>
         <item name="shapeAppearance">@style/ShapeAppearance.App.Large</item>
+    </style>
+
+    <!-- Smaller buttons for the less common situations. -->
+    <style name="Widget.App.Button.SituationSmall" parent="Widget.App.Button.Situation">
+        <item name="android:minHeight">112dp</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
+        <item name="android:textAppearance">@style/TextAppearance.App.Label</item>
+        <item name="iconSize">@dimen/icon_size</item>
+        <item name="iconPadding">@dimen/gap_small</item>
+        <item name="android:maxLines">2</item>
     </style>
 
     <style name="Widget.App.CardContent" parent="">

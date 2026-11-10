@@ -19,18 +19,22 @@ public final class MockEmergencyReporter {
         @Nullable public final Double latitude;
         @Nullable public final Double longitude;
         @Nullable public final Float speedKph;
+        /** The facility the report was addressed to, or null for a general report. */
+        @Nullable public final String facilityName;
 
         Report(
                 EmergencyType type,
                 long createdAtMillis,
                 @Nullable Double latitude,
                 @Nullable Double longitude,
-                @Nullable Float speedKph) {
+                @Nullable Float speedKph,
+                @Nullable String facilityName) {
             this.type = type;
             this.createdAtMillis = createdAtMillis;
             this.latitude = latitude;
             this.longitude = longitude;
             this.speedKph = speedKph;
+            this.facilityName = facilityName;
         }
     }
 
@@ -42,7 +46,18 @@ public final class MockEmergencyReporter {
             @Nullable Double latitude,
             @Nullable Double longitude,
             @Nullable Float speedKph) {
-        Report report = new Report(type, createdAtMillis, latitude, longitude, speedKph);
+        return submit(type, createdAtMillis, latitude, longitude, speedKph, null);
+    }
+
+    /** Records a report addressed to one facility. Still nothing leaves the app. */
+    public Report submit(
+            EmergencyType type,
+            long createdAtMillis,
+            @Nullable Double latitude,
+            @Nullable Double longitude,
+            @Nullable Float speedKph,
+            @Nullable String facilityName) {
+        Report report = new Report(type, createdAtMillis, latitude, longitude, speedKph, facilityName);
         reports.add(report);
         return report;
     }

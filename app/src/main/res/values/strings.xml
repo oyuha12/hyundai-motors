@@ -88,47 +88,86 @@
     <string name="evacuation_route">경로 안내</string>
     <string name="support_title">주변 도움 시설</string>
     <string name="support_notice">샘플 시설입니다. 실제 장소가 아닙니다.</string>
-
+    <!-- Situation titles -->
     <string name="emergency_ua">급발진</string>
+    <string name="emergency_brake">브레이크 고장</string>
     <string name="emergency_accident">사고</string>
     <string name="emergency_fire">화재</string>
     <string name="emergency_flood">침수</string>
+    <string name="emergency_tire">타이어 이상</string>
+    <string name="emergency_health">운전자 건강 이상</string>
+    <string name="emergency_secondary">2차 사고 위험</string>
 
+    <!-- Why a situation was raised -->
     <string name="reason_manual">직접 선택한 상황입니다</string>
     <string name="reason_acceleration">브레이크를 밟고 있는데 속도가 계속 오릅니다</string>
     <string name="reason_sudden_stop">짧은 시간에 속도가 급격히 줄었습니다</string>
     <string name="reason_airbag">에어백 전개가 감지되었습니다</string>
     <string name="reason_cabin_heat">실내 온도가 빠르게 오르고 있습니다</string>
     <string name="reason_overheat">엔진 과열 경고가 켜졌습니다</string>
+    <string name="reason_brake_no_effect">브레이크를 밟고 있는데 속도가 줄지 않습니다</string>
+    <string name="reason_brake_fluid">브레이크 오일 경고가 켜졌습니다</string>
+    <string name="reason_tire_pressure">타이어 공기압이 급격히 떨어졌습니다</string>
 
+    <!-- Evacuation route instruction -->
     <string name="evacuation_ua">비상등을 켜고 안전 정차 구역으로 이동하세요</string>
+    <string name="evacuation_brake">속도를 줄인 뒤 안전 정차 구역으로 이동하세요</string>
     <string name="evacuation_accident">차가 움직일 수 있으면 안전 정차 구역으로 옮기세요</string>
     <string name="evacuation_fire">차에서 내려 대피 장소로 이동하세요</string>
     <string name="evacuation_flood">물이 없는 높은 곳의 대피 장소로 이동하세요</string>
+    <string name="evacuation_tire">속도가 충분히 줄면 갓길이나 안전 정차 구역으로 이동하세요</string>
+    <string name="evacuation_health">동승자가 있다면 안전 정차 구역에 차를 세워 주세요</string>
+    <string name="evacuation_secondary">차에 머물지 말고 가드레일 밖 안전지대로 대피하세요</string>
 
-    <string name="step_ua_brake">가속 페달에서 발을 떼고 브레이크를 세게 밟아 유지하세요. 반복해서 밟지 마세요.</string>
+    <!-- Steps: unintended acceleration -->
+    <string name="step_ua_brake">브레이크 페달을 한 번에 꽉 밟아 유지하세요. 반복해서 밟지 마세요.</string>
     <string name="step_ua_neutral">기어를 중립 N으로 바꾸세요.</string>
-    <string name="step_ua_parking_brake">멈추지 않으면 전자식 주차 브레이크 스위치를 계속 당기세요.</string>
+    <string name="step_ua_keep_power">시동은 완전히 끄지 마세요. 핸들이 잠길 수 있습니다.</string>
+    <string name="step_ua_parking_brake">전자식 주차 브레이크 스위치를 계속 당겨 속도를 줄이세요.</string>
     <string name="step_ua_steer">비상등을 켜고 안전한 곳으로 조향하세요.</string>
-    <string name="step_ua_after">정차 후 기어를 P로 바꾸고, 다시 운전하지 말고 견인을 요청하세요.</string>
 
-    <string name="step_accident_hazard">비상등을 켜세요.</string>
+    <!-- Steps: brake failure -->
+    <string name="step_brake_downshift">패들 시프트로 기어를 낮춰 엔진 브레이크를 거세요.</string>
+    <string name="step_brake_parking">전자식 주차 브레이크 스위치를 계속 당겨 보조 제동하세요.</string>
+    <string name="step_brake_hazard">비상등을 켜고 경적으로 주변에 알리세요.</string>
+    <string name="step_brake_last_resort">멈추지 않으면 가드레일이나 중앙분리대에 차 옆면을 붙여 속도를 줄이세요.</string>
+
+    <!-- Steps: accident -->
+    <string name="step_accident_hazard">비상등을 켜고 트렁크를 열어 뒤차에 알리세요.</string>
     <string name="step_accident_injury">다친 사람이 있는지 확인하고, 크게 다쳤으면 무리하게 움직이지 마세요.</string>
-    <string name="step_accident_evacuate">안전하면 차에서 나와 가드레일 밖으로 대피하세요.</string>
+    <string name="step_accident_evacuate">차 안에 머물지 말고 가드레일 밖 안전지대로 대피하세요.</string>
     <string name="step_accident_triangle">안전하면 차 뒤에 안전삼각대를 세우세요.</string>
-    <string name="step_accident_report">구조가 필요하면 신고하세요.</string>
+    <string name="step_accident_report">대피한 뒤 신고하세요.</string>
 
-    <string name="step_fire_stop">비상등을 켜고 갓길 등 안전한 곳에 차를 세우세요.</string>
-    <string name="step_fire_engine">시동을 끄세요.</string>
-    <string name="step_fire_evacuate">짐을 챙기지 말고 모두 차에서 내려 멀리 대피하세요.</string>
+    <!-- Steps: fire -->
+    <string name="step_fire_stop">비상등을 켜고 안전한 곳에 차를 세우세요.</string>
+    <string name="step_fire_engine">시동을 끄고 짐을 챙기지 말고 즉시 대피하세요.</string>
     <string name="step_fire_hood">보닛을 열지 마세요. 산소가 들어가 불이 커질 수 있습니다.</string>
-    <string name="step_fire_report">안전한 곳에서 119에 신고하세요.</string>
+    <string name="step_fire_report">충분히 떨어진 안전한 곳에서 신고하세요.</string>
 
-    <string name="step_flood_avoid">물에 잠긴 도로로 들어가지 마세요.</string>
-    <string name="step_flood_leave">타이어가 3분의 2 이상 잠기기 전에 차를 높은 곳으로 옮기거나 내려서 대피하세요.</string>
-    <string name="step_flood_window">물이 차 안으로 들어오면 목받침 철재봉으로 옆 유리창 모서리를 깨고 탈출하세요.</string>
-    <string name="step_flood_door">창문을 깨지 못하면 안팎의 물 높이가 비슷해질 때 문을 열고 탈출하세요.</string>
-    <string name="step_flood_high_ground">물이 흐르는 반대쪽 높은 곳으로 대피하세요.</string>
+    <!-- Steps: flood -->
+    <string name="step_flood_open">물이 타이어 절반까지 차오르기 전에 창문과 선루프를 여세요.</string>
+    <string name="step_flood_belt">안전벨트를 풀고 탈출을 준비하세요.</string>
+    <string name="step_flood_window">문이 안 열리면 비상망치나 목받침 철재봉으로 창문 모서리를 깨세요.</string>
+    <string name="step_flood_high_ground">차량 지붕이나 높은 곳으로 대피하세요.</string>
+
+    <!-- Steps: tire failure (wheel off, burst) -->
+    <string name="step_tire_no_brake">브레이크를 급하게 밟지 마세요. 차가 미끄러질 수 있습니다.</string>
+    <string name="step_tire_hold">핸들을 두 손으로 꽉 잡고 직진을 유지하세요.</string>
+    <string name="step_tire_slow">가속 페달에서 발을 떼고 엔진 브레이크로 천천히 감속하세요.</string>
+    <string name="step_tire_shoulder">속도가 충분히 줄면 비상등을 켜고 갓길로 이동하세요.</string>
+
+    <!-- Steps: driver health -->
+    <string name="step_health_wake">운전자님, 괜찮으세요? 대답하거나 화면을 눌러 주세요.</string>
+    <string name="step_health_passenger">동승자는 비상등을 켜고 주변에 알리세요.</string>
+    <string name="step_health_check">안전하게 정차한 뒤 운전자의 의식과 호흡을 확인하세요.</string>
+    <string name="step_health_report">반응이 없으면 즉시 신고하세요. 임시 신고는 이미 기록되었습니다.</string>
+
+    <!-- Steps: secondary accident -->
+    <string name="step_secondary_signal">비상등을 켜고 트렁크를 열어 뒤차에 알리세요.</string>
+    <string name="step_secondary_evacuate">차에 머물지 말고 모두 가드레일 밖 안전지대로 대피하세요.</string>
+    <string name="step_secondary_report">대피한 뒤 신고하세요.</string>
+
 
     <!-- Confirmation before the situation screen -->
     <string name="confirm_title">%1$s 상황인가요?</string>
@@ -151,4 +190,53 @@
     <string name="drowsy_close">닫기</string>
     <string name="scenario_drowsy">졸음운전 안내 (같은 방향 단조 주행, 20초 시연)</string>
     <string name="scenario_stop">시연 중지</string>
+
+    <!-- Responder arrival estimates -->
+    <string name="facility_road_authority">도로공사</string>
+    <string name="dispatch_request">임시 출동 요청</string>
+    <string name="dispatch_requested">요청됨 (테스트)</string>
+    <string name="mock_dispatch_done">%1$s에 임시 출동 요청을 앱에만 기록했습니다. 실제로 전송되지 않았습니다.</string>
+    <string name="eta_caption_estimate">출동 시 도착 예상</string>
+    <string name="eta_caption_countdown">도착까지 (예상)</string>
+    <string name="eta_caption_arrived">예상 도착 시간 경과</string>
+    <string name="eta_minutes">약 %1$d분</string>
+    <string name="eta_countdown">%1$d분 %2$02d초</string>
+    <string name="eta_arrived">곧 도착</string>
+    <string name="responders_title">출동 기관과 예상 도착 시간</string>
+    <string name="responders_notice">샘플 시설입니다. 도착 시간은 거리로 계산한 추정치이며 실제 교통 상황은 반영하지 않습니다.</string>
+
+    <!-- Situations from the team's response table -->
+    <string name="situation_more">다른 위급 상황</string>
+    <string name="situation_brake">브레이크 고장</string>
+    <string name="situation_tire">타이어 이상</string>
+    <string name="situation_health">운전자 건강</string>
+    <string name="situation_secondary">2차 사고 예방</string>
+    <string name="scenario_brake">브레이크 고장 감지 (브레이크 중 감속 없음)</string>
+    <string name="scenario_tire">타이어 이상 감지 (공기압 급감)</string>
+    <string name="test_warnings_title">운전 실수 음성 경고 (화면 전환 없음)</string>
+    <string name="scenario_pedal">페달 오조작 (정지 상태에서 급가속)</string>
+    <string name="scenario_reverse">기어 확인 (빠른 후진)</string>
+    <string name="scenario_curve">커브 과속 (속도와 핸들 각도)</string>
+    <string name="warn_pedal_misapplication">급가속이 감지되었습니다. 가속 페달에서 발을 떼고 브레이크를 밟으세요.</string>
+    <string name="warn_fast_reverse">후진 속도가 빠릅니다. 기어가 R인지 확인하고 브레이크를 밟으세요.</string>
+    <string name="warn_curve_overspeed">커브에서 속도가 빠릅니다. 가속 페달에서 발을 떼고 속도를 줄이세요.</string>
+    <string name="detail_events_label">사고 기록</string>
+    <string name="event_count">%1$d건</string>
+
+    <!-- Demo settings and in-app route playback for PC emulator videos -->
+    <string name="demo_settings_title">시연 설정 (PC 에뮬레이터 영상용)</string>
+    <string name="demo_route_switch">경로 안내를 앱 안에서 시연 (내비게이션 앱 대신)</string>
+    <string name="demo_location_switch">시연 위치 사용 (서울 강남 샘플 위치)</string>
+    <string name="demo_location_label">샘플 위치 (서울 강남)</string>
+    <string name="route_demo_notice">시연용 경로입니다. 실제 도로가 아니며 10배속으로 재생됩니다.</string>
+    <string name="route_demo_close">닫기</string>
+    <string name="route_demo_pause">일시정지</string>
+    <string name="route_demo_play">재생</string>
+    <string name="route_demo_restart">처음부터</string>
+    <string name="route_demo_start">%1$s까지 경로 안내를 시작합니다.</string>
+    <string name="route_demo_turn_left">%1$s 앞에서 좌회전</string>
+    <string name="route_demo_turn_right">%1$s 앞에서 우회전</string>
+    <string name="route_demo_destination_ahead">%1$s 앞 목적지</string>
+    <string name="route_demo_arrived">%1$s에 도착했습니다.</string>
+    <string name="route_demo_remaining">남은 거리 %1$s · 약 %2$d분</string>
 </resources>

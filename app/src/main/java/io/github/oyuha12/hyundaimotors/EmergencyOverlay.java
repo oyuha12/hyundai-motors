@@ -12,7 +12,9 @@ import io.github.oyuha12.hyundaimotors.diagnosis.EmergencyType;
 import io.github.oyuha12.hyundaimotors.diagnosis.GuidanceStep;
 import io.github.oyuha12.hyundaimotors.facility.Facility;
 import io.github.oyuha12.hyundaimotors.report.MockEmergencyReporter;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Situation screen: one instruction at a time, the evacuation route, nearby help and a mock
@@ -36,6 +38,7 @@ final class EmergencyOverlay {
     private final TextView evacuationDetail;
     private final View evacuationRoute;
     private final ViewGroup facilityList;
+    private Map<String, Long> dispatched = Collections.emptyMap();
     private final ImageView stepIcon;
     private final StepAnimator stepAnimator;
     private boolean motionAllowed;
@@ -87,7 +90,9 @@ final class EmergencyOverlay {
             evacuationRoute.setOnClickListener(v -> viewModel.navigateTo(target));
         }
 
-        FacilityUi.fillList(facilityList, viewModel.supportFacilities(active.type), viewModel::navigateTo);
+        FacilityUi.fillList(facilityList, viewModel.supportFacilities(active.type),
+                viewModel::navigateTo, viewModel::requestDispatch);
+        showDispatches(viewModel.getDispatches().getValue());
     }
 
     void showStep(@Nullable Integer index) {
@@ -122,5 +127,26 @@ final class EmergencyOverlay {
 
     void showReport(@Nullable MockEmergencyReporter.Report report) {
         reportStatus.setVisibility(report == null ? View.GONE : View.VISIBLE);
+        if (report == null) return;
+        reportStatus.setText(report.facilityName == null
+                ? root.getContext().getString(R.string.mock_report_done)
+                : root.getContext().getString(R.string.mock_dispatch_done, report.facilityName));
     }
+
+    /** Refreshes arrival estimates and, once a request is made, counts down every second. */
+    void showDispatches(@Nullable Map<String, Long> dispatched) {
+        this.dispatched = dispatched == null ? Collections.emptyMap() : dispatched;
+        root.removeCallbacks(countdownTick);
+        countdownTick.run();
+    }
+
+    private final Runnable countdownTick = new Runnable() {
+        @Override
+        public void run() {
+            FacilityUi.updateArrivals(facilityList, dispatched);
+            if (!dispatched.isEmpty() && root.getVisibility() == View.VISIBLE) {
+                root.postDelayed(this, 1_000L);
+            }
+        }
+    };
 }

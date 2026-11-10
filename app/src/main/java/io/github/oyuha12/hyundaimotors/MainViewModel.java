@@ -1,8 +1,12 @@
 package io.github.oyuha12.hyundaimotors;
 
 import android.app.Application;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
+import android.util.Log;
 import androidx.annotation.IdRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -16,19 +20,33 @@ import io.github.oyuha12.hyundaimotors.diagnosis.EmergencyDetector;
 import io.github.oyuha12.hyundaimotors.diagnosis.EmergencyPlan;
 import io.github.oyuha12.hyundaimotors.diagnosis.EmergencyType;
 import io.github.oyuha12.hyundaimotors.diagnosis.GuidanceStep;
+import io.github.oyuha12.hyundaimotors.drowsiness.DrivingWarningMonitor;
 import io.github.oyuha12.hyundaimotors.drowsiness.DrowsinessMonitor;
 import io.github.oyuha12.hyundaimotors.facility.Facility;
+import io.github.oyuha12.hyundaimotors.facility.ResponseEstimator;
 import io.github.oyuha12.hyundaimotors.facility.RouteNavigator;
 import io.github.oyuha12.hyundaimotors.facility.SampleFacilityRepository;
 import io.github.oyuha12.hyundaimotors.guidance.AnswerClassifier;
 import io.github.oyuha12.hyundaimotors.guidance.GuidanceSpeaker;
 import io.github.oyuha12.hyundaimotors.guidance.VoiceAnswerListener;
+import io.github.oyuha12.hyundaimotors.report.EventRecorder;
 import io.github.oyuha12.hyundaimotors.report.MockEmergencyReporter;
 import io.github.oyuha12.hyundaimotors.telemetry.PleosTelemetrySource;
 import io.github.oyuha12.hyundaimotors.telemetry.SimulatedTelemetrySource;
 import io.github.oyuha12.hyundaimotors.telemetry.TelemetrySource;
 import io.github.oyuha12.hyundaimotors.telemetry.VehicleSnapshot;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Runs diagnosis and guidance, and keeps state across activity recreation on window resize.
@@ -79,6 +97,9 @@ public final class MainViewModel extends AndroidViewModel {
     private final FakeDrivingStateSource drivingState = new FakeDrivingStateSource();
     private final EmergencyDetector detector = new EmergencyDetector();
     private final DrowsinessMonitor drowsiness = new DrowsinessMonitor();
+    private final DrivingWarningMonitor drivingWarnings = new DrivingWarningMonitor();
+    private final EventRecorder eventRecorder = new EventRecorder();
+    private final ExecutorService io = Executors.newSingleThreadExecutor();
     private final SampleFacilityRepository facilities = new SampleFacilityRepository();
     private final MockEmergencyReporter reporter = new MockEmergencyReporter();
     private final GuidanceSpeaker speaker;
@@ -95,7 +116,10 @@ public final class MainViewModel extends AndroidViewModel {
     /** Seconds until a detected emergency proceeds without an answer, or -1. */
     private final MutableLiveData<Integer> countdown = new MutableLiveData<>(-1);
     /** Drowsiness reminder text on the home screen, as a string resource, or 0. */
+    /** Drowsiness or driver mistake message on the home screen, as a string resource, or 0. */
     private final MutableLiveData<Integer> drowsinessAlert = new MutableLiveData<>(0);
+    private final MutableLiveData<Integer> eventRecordCount = new MutableLiveData<>(0);
+    private final MutableLiveData<Facility> demoRouteRequest = new MutableLiveData<>();
 
     private TelemetrySource vehicleSource;
     @Nullable private TelemetrySource simulation;
@@ -107,6 +131,8 @@ public final class MainViewModel extends AndroidViewModel {
     /** Increases with every new question, so late voice callbacks can be ignored. */
     private int questionId;
     private long normalSince = -1L;
+    private final MutableLiveData<Map<String, Long>> dispatches =
+            new MutableLiveData<>(Collections.emptyMap());
 
     @IdRes
     private int selectedDestination = R.id.nav_home;
@@ -116,6 +142,7 @@ public final class MainViewModel extends AndroidViewModel {
         speaker = new GuidanceSpeaker(application);
         voice = new VoiceAnswerListener(application);
         navigator = new RouteNavigator(application);
+        io.execute(this::countEventRecords);
         startVehicleSource();
     }
 
@@ -134,6 +161,7 @@ public final class MainViewModel extends AndroidViewModel {
 
     private void onReading(VehicleSnapshot reading) {
         snapshot.setValue(reading);
+        eventRecorder.add(reading);
         Detection detected = detector.evaluate(reading);
         ActiveEmergency current = emergency.getValue();
 
@@ -141,7 +169,7 @@ public final class MainViewModel extends AndroidViewModel {
             checkBackToNormal(current, reading, detected);
             return;
         }
-        checkDrowsiness(reading);
+        checkDrivingAlerts(reading);
         if (detected == null) {
             dismissed = null;
             return;
@@ -163,6 +191,7 @@ public final class MainViewModel extends AndroidViewModel {
         stopAllSpeech();
         emergency.setValue(pending);
         lastReport.setValue(null);
+        dispatches.setValue(Collections.emptyMap());
         navigator.clearStatus();
         drowsinessAlert.setValue(0);
         normalSince = -1L;
@@ -172,6 +201,7 @@ public final class MainViewModel extends AndroidViewModel {
                 pending.detected ? R.string.confirm_prompt_detected : R.string.confirm_prompt_manual,
                 situation));
         if (pending.detected) {
+            saveEventRecord(pending);
             countdown.setValue(NO_ANSWER_SECONDS);
             handler.postDelayed(countdownTick, 1_000L);
         } else {
@@ -249,6 +279,8 @@ public final class MainViewModel extends AndroidViewModel {
         if (current == null || current.confirmed) return;
         stopAllSpeech();
         emergency.setValue(current.asConfirmed());
+        if (!current.detected) saveEventRecord(current);
+        if (EmergencyPlan.reportsOnConfirm(current.type)) submitMockReport();
         steps = EmergencyPlan.steps(current.type);
         speakStep(0);
     }
@@ -309,6 +341,7 @@ public final class MainViewModel extends AndroidViewModel {
         dismissed = current != null && current.detected ? current.type : null;
         emergency.setValue(null);
         lastReport.setValue(null);
+        dispatches.setValue(Collections.emptyMap());
         normalSince = -1L;
         stopSimulation();
         if (announcement != 0) speaker.speak(getApplication().getString(announcement), null);
@@ -325,14 +358,65 @@ public final class MainViewModel extends AndroidViewModel {
 
     // ---- Drowsiness reminder (side feature) ---------------------------------------------------
 
-    private void checkDrowsiness(VehicleSnapshot reading) {
+    /** Drowsiness reminders and driver mistake warnings: voice and a small card, never a takeover. */
+    private void checkDrivingAlerts(VehicleSnapshot reading) {
+        int message = 0;
+        DrivingWarningMonitor.Warning warning = drivingWarnings.update(reading);
+        if (warning != null) {
+            switch (warning) {
+                case PEDAL_MISAPPLICATION:
+                    message = R.string.warn_pedal_misapplication;
+                    break;
+                case FAST_REVERSE:
+                    message = R.string.warn_fast_reverse;
+                    break;
+                case CURVE_OVERSPEED:
+                default:
+                    message = R.string.warn_curve_overspeed;
+                    break;
+            }
+        }
         DrowsinessMonitor.Alert alert = drowsiness.update(reading);
-        if (alert == null) return;
-        int message = alert == DrowsinessMonitor.Alert.MONOTONOUS_DRIVING
-                ? R.string.drowsy_monotonous
-                : R.string.drowsy_long_driving;
+        if (message == 0 && alert != null) {
+            message = alert == DrowsinessMonitor.Alert.MONOTONOUS_DRIVING
+                    ? R.string.drowsy_monotonous
+                    : R.string.drowsy_long_driving;
+        }
+        if (message == 0) return;
         drowsinessAlert.setValue(message);
         speaker.speak(getApplication().getString(message), null);
+    }
+
+    // ---- Event records (simplified EDR) -------------------------------------------------------
+
+    private void saveEventRecord(ActiveEmergency active) {
+        long now = System.currentTimeMillis();
+        String json = eventRecorder.toJson(
+                active.type, active.detected, getApplication().getString(active.reason), now);
+        File file = new File(eventRecordDir(), EventRecorder.fileName(active.type, now));
+        io.execute(() -> {
+            try (FileOutputStream out = new FileOutputStream(file)) {
+                out.write(json.getBytes(StandardCharsets.UTF_8));
+            } catch (IOException error) {
+                Log.w("EventRecorder", "Could not save event record", error);
+            }
+            countEventRecords();
+        });
+    }
+
+    private File eventRecordDir() {
+        File dir = new File(getApplication().getFilesDir(), "event_records");
+        if (!dir.exists() && !dir.mkdirs()) Log.w("EventRecorder", "Could not create " + dir);
+        return dir;
+    }
+
+    private void countEventRecords() {
+        File[] files = eventRecordDir().listFiles((dir, name) -> name.endsWith(".json"));
+        eventRecordCount.postValue(files == null ? 0 : files.length);
+    }
+
+    public LiveData<Integer> getEventRecordCount() {
+        return eventRecordCount;
     }
 
     public void dismissDrowsinessAlert() {
@@ -358,6 +442,7 @@ public final class MainViewModel extends AndroidViewModel {
         stopSimulation();
         detector.reset();
         dismissed = null;
+        drivingWarnings.reset();
         if (scenario == SimulatedTelemetrySource.Scenario.MONOTONOUS_DRIVE) {
             drowsiness.setConfig(DrowsinessMonitor.DEMO);
         }
@@ -382,7 +467,9 @@ public final class MainViewModel extends AndroidViewModel {
 
     // ---- Facilities and navigation ------------------------------------------------------------
 
+    /** False when the demo location is on, so screens say they use the sample location. */
     public boolean hasRealLocation() {
+        if (isDemoLocationEnabled()) return false;
         VehicleSnapshot reading = snapshot.getValue();
         return reading != null && reading.hasLocation();
     }
@@ -404,12 +491,94 @@ public final class MainViewModel extends AndroidViewModel {
         return facilities.nearest(EmergencyPlan.evacuationTarget(type), latitude(), longitude());
     }
 
+    /** Facilities that can help, responders first and soonest arrival first. */
     public List<Facility> supportFacilities(EmergencyType type) {
-        return facilities.nearestOfEach(EmergencyPlan.supportTypes(type), latitude(), longitude());
+        List<Facility> result = new ArrayList<>(
+                facilities.nearestOfEach(EmergencyPlan.supportTypes(type), latitude(), longitude()));
+        result.sort(Comparator.comparingLong(facility -> {
+            Long arrival = ResponseEstimator.arrivalMillis(facility);
+            return arrival == null ? Long.MAX_VALUE : arrival;
+        }));
+        return result;
     }
 
+    /**
+     * TEST ONLY: records a report addressed to one facility and starts its arrival countdown.
+     * Nothing leaves the app.
+     */
+    public void requestDispatch(Facility facility) {
+        ActiveEmergency active = emergency.getValue();
+        Long arrival = ResponseEstimator.arrivalMillis(facility);
+        if (active == null || arrival == null) return;
+        Map<String, Long> current = dispatches.getValue();
+        if (current != null && current.containsKey(facility.name)) return;
+        VehicleSnapshot reading = snapshot.getValue();
+        lastReport.setValue(reporter.submit(
+                active.type,
+                System.currentTimeMillis(),
+                reading == null ? null : reading.latitude,
+                reading == null ? null : reading.longitude,
+                reading == null ? null : reading.speedKph,
+                facility.name));
+        Map<String, Long> updated = current == null ? new HashMap<>() : new HashMap<>(current);
+        updated.put(facility.name, SystemClock.elapsedRealtime() + arrival);
+        dispatches.setValue(updated);
+    }
+
+    /** Facility name to expected arrival, on the SystemClock.elapsedRealtime() clock. */
+    public LiveData<Map<String, Long>> getDispatches() {
+        return dispatches;
+    }
+
+    /** Sends a route to the navigation app, or shows the in-app demo route when that is on. */
     public void navigateTo(Facility facility) {
-        navigator.navigateTo(facility);
+        if (isDemoRouteEnabled()) {
+            demoRouteRequest.setValue(facility);
+        } else {
+            navigator.navigateTo(facility);
+        }
+    }
+
+    // ---- Demo settings for PC emulator videos --------------------------------------------------
+
+    private static final String DEMO_PREFS = "demo";
+    private static final String KEY_DEMO_ROUTE = "demo_route";
+    private static final String KEY_DEMO_LOCATION = "demo_location";
+
+    private SharedPreferences demoPrefs() {
+        return getApplication().getSharedPreferences(DEMO_PREFS, Context.MODE_PRIVATE);
+    }
+
+    /** In-app route playback instead of the vehicle's navigation app. On by default for demos. */
+    public boolean isDemoRouteEnabled() {
+        return demoPrefs().getBoolean(KEY_DEMO_ROUTE, true);
+    }
+
+    public void setDemoRouteEnabled(boolean enabled) {
+        demoPrefs().edit().putBoolean(KEY_DEMO_ROUTE, enabled).apply();
+    }
+
+    /** A fixed sample location in Seoul instead of the emulator's default location abroad. */
+    public boolean isDemoLocationEnabled() {
+        return demoPrefs().getBoolean(KEY_DEMO_LOCATION, true);
+    }
+
+    public void setDemoLocationEnabled(boolean enabled) {
+        demoPrefs().edit().putBoolean(KEY_DEMO_LOCATION, enabled).apply();
+    }
+
+    /** A facility to show in the demo route screen. Cleared once shown. */
+    public LiveData<Facility> getDemoRouteRequest() {
+        return demoRouteRequest;
+    }
+
+    public void onDemoRouteShown() {
+        demoRouteRequest.setValue(null);
+    }
+
+    /** Speaks a short message, for example demo route instructions. */
+    public void say(String text) {
+        speaker.speak(text, null);
     }
 
     // ---- Observables --------------------------------------------------------------------------
@@ -473,6 +642,7 @@ public final class MainViewModel extends AndroidViewModel {
         if (simulation != null) simulation.stop();
         vehicleSource.stop();
         speaker.release();
+        io.shutdown();
         voice.release();
         navigator.release();
     }

@@ -26,6 +26,8 @@ public final class SampleFacilityRepository {
         {Type.HOSPITAL, "샘플 병원 B", 3_200, 150},
         {Type.POLICE, "샘플 경찰서 B", 3_900, 15},
         {Type.FIRE_STATION, "샘플 소방서 B", 4_400, 280},
+        {Type.ROAD_AUTHORITY, "샘플 도로공사 지사", 3_500, 100},
+        {Type.ROAD_AUTHORITY, "샘플 도로공사 지사 B", 6_000, 300},
     };
 
     /** Returns all sample facilities, nearest first. */

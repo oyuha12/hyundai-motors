@@ -174,6 +174,44 @@ public class EmergencyDetectorTest {
     }
 
     @Test
+    public void brakeHeldWithoutSlowing_isBrakeFailure() {
+        assertEquals(EmergencyType.BRAKE_FAILURE, ramp(60f, 0f, true, 3_250L));
+    }
+
+    @Test
+    public void brakeFluidWarningWhileMoving_isBrakeFailure() {
+        Detection result = detector.evaluate(new VehicleSnapshot(
+                now, 50f, false, Gear.DRIVE, false, 22f, false, null, null)
+                .withChassis(true, null, null));
+        assertEquals(EmergencyType.BRAKE_FAILURE, result.type);
+        assertEquals(io.github.oyuha12.hyundaimotors.R.string.reason_brake_fluid, result.reason);
+    }
+
+    @Nullable
+    private EmergencyType feedTire(float frontLeft) {
+        Detection result = detector.evaluate(new VehicleSnapshot(
+                now, 80f, false, Gear.DRIVE, false, 22f, false, null, null)
+                .withChassis(false, new float[] {frontLeft, 230f, 230f, 230f}, null));
+        now += STEP_MILLIS;
+        return result == null ? null : result.type;
+    }
+
+    @Test
+    public void suddenTirePressureLoss_isTireFailure() {
+        assertNull(feedTire(230f));
+        assertNull(feedTire(220f));
+        assertEquals(EmergencyType.TIRE_FAILURE, feedTire(160f));
+    }
+
+    @Test
+    public void slowTirePressureLoss_isNotTireFailure() {
+        // 1 kPa per second never reaches a quarter within 10 s.
+        for (int i = 0; i < 200; i++) {
+            assertNull(feedTire(230f - i * 0.25f));
+        }
+    }
+
+    @Test
     public void accident_outranksOtherConditions() {
         feed(0f, false, Gear.PARK, false, 22f, true);
         assertEquals(EmergencyType.ACCIDENT, feed(0f, false, Gear.PARK, true, 22f, true));
