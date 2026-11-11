@@ -38,21 +38,36 @@ public final class GuidanceStep {
     @DrawableRes public final int icon;
     public final Motion motion;
     @StringRes public final int text;
+    /**
+     * After this step is read, the next one waits until the car has stopped, because the next
+     * action (for example turning the engine off) is only safe once it has.
+     */
+    public final boolean waitsForStop;
 
     GuidanceStep(@DrawableRes int icon, Motion motion, @StringRes int text) {
-        this(null, icon, motion, text);
+        this(null, icon, motion, text, false);
     }
 
     GuidanceStep(String symbol, Motion motion, @StringRes int text) {
-        this(symbol, 0, motion, text);
+        this(symbol, 0, motion, text, false);
     }
 
     private GuidanceStep(
-            @Nullable String symbol, @DrawableRes int icon, Motion motion, @StringRes int text) {
+            @Nullable String symbol,
+            @DrawableRes int icon,
+            Motion motion,
+            @StringRes int text,
+            boolean waitsForStop) {
         this.symbol = symbol;
         this.icon = icon;
         this.motion = motion;
         this.text = text;
+        this.waitsForStop = waitsForStop;
+    }
+
+    /** This step, with the next one waiting until the car has stopped. */
+    GuidanceStep untilStopped() {
+        return new GuidanceStep(symbol, icon, motion, text, true);
     }
 
     public boolean hasIcon() {

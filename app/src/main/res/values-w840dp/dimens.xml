@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="popup_side_padding">160dp</dimen>
+    <!-- Wide windows stretch the mini map to the window height instead. -->
+    <dimen name="status_map_min_height">160dp</dimen>
 </resources>

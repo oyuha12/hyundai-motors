@@ -15,7 +15,9 @@
         android:minHeight="@dimen/touch_target"
         android:orientation="horizontal">
 
+        <!-- In video mode a long press opens the hidden demo menu. -->
         <TextView
+            android:id="@+id/app_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"

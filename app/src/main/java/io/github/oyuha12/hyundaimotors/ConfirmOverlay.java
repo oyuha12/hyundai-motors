@@ -14,9 +14,11 @@ final class ConfirmOverlay {
     private final TextView reason;
     private final TextView voiceStatus;
     private final TextView countdown;
+    private final View mockBanner;
 
     ConfirmOverlay(View root, MainViewModel viewModel) {
         this.root = root;
+        mockBanner = root.findViewById(R.id.confirm_mock_banner);
         icon = root.findViewById(R.id.confirm_icon);
         title = root.findViewById(R.id.confirm_title);
         reason = root.findViewById(R.id.confirm_reason);
@@ -35,6 +37,11 @@ final class ConfirmOverlay {
         title.setText(root.getContext().getString(
                 R.string.confirm_title, root.getContext().getString(EmergencyPlan.title(pending.type))));
         reason.setText(pending.reason);
+    }
+
+    /** Video mode hides the test banner. */
+    void setVideoMode(boolean on) {
+        mockBanner.setVisibility(on ? View.GONE : View.VISIBLE);
     }
 
     void showVoiceStatus(@Nullable Integer message) {

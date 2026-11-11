@@ -13,7 +13,14 @@
     <dimen name="icon_size">32dp</dimen>
     <dimen name="icon_size_large">56dp</dimen>
     <dimen name="facility_icon_container">64dp</dimen>
-    <dimen name="step_symbol_size">128dp</dimen>
+    <dimen name="step_symbol_size">144dp</dimen>
+    <dimen name="step_icon_size">88dp</dimen>
+    <!-- The mini map on the status screen, when it is not stretched to the window. -->
+    <dimen name="status_map_min_height">320dp</dimen>
+    <!-- The SOS report button: the largest action on the situation screen. -->
+    <dimen name="sos_button_height">128dp</dimen>
+    <!-- Label column of the report receipt. -->
+    <dimen name="receipt_label_width">200dp</dimen>
     <!-- Pleos system popup: centered card, side padding grows with the window. -->
     <dimen name="popup_side_padding">32dp</dimen>
     <dimen name="popup_padding">40dp</dimen>

@@ -1,6 +1,7 @@
 package io.github.oyuha12.hyundaimotors.report;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import io.github.oyuha12.hyundaimotors.diagnosis.EmergencyType;
@@ -12,6 +13,16 @@ public class EventRecorderTest {
     private static VehicleSnapshot at(long millis, float speed) {
         return new VehicleSnapshot(millis, speed, true, Gear.DRIVE, false, 22f, false, 37.5, 127.0)
                 .withChassis(false, new float[] {230f, 230f, Float.NaN, 230f}, 5f);
+    }
+
+    @Test
+    public void maxSpeed_isTheHighestOfTheKeptMinute() {
+        EventRecorder recorder = new EventRecorder();
+        assertNull(recorder.maxSpeedKph());
+        recorder.add(at(0L, 120f));
+        recorder.add(at(30_000L, 90f));
+        recorder.add(at(61_000L, 0f)); // The 120 km/h reading is now older than a minute.
+        assertEquals(90f, recorder.maxSpeedKph(), 0f);
     }
 
     @Test

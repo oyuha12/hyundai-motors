@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Where to evacuate, then who is coming and how soon. Then back to the guidance, or end. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <com.google.android.material.card.MaterialCardView
+        style="@style/Widget.App.Card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <LinearLayout style="@style/Widget.App.CardContent">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/status_evacuation"
+                android:textAppearance="@style/TextAppearance.App.Title"
+                android:textColor="@color/on_surface" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/gap"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <FrameLayout
+                    android:layout_width="@dimen/facility_icon_container"
+                    android:layout_height="@dimen/facility_icon_container"
+                    android:background="@drawable/bg_icon_circle"
+                    android:backgroundTint="@color/success_container">
+
+                    <ImageView
+                        android:id="@+id/status_evacuation_icon"
+                        android:layout_width="@dimen/icon_size"
+                        android:layout_height="@dimen/icon_size"
+                        android:layout_gravity="center"
+                        android:importantForAccessibility="no"
+                        app:tint="@color/success" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/gap_large"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/status_evacuation_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textAppearance="@style/TextAppearance.App.TitleLarge" />
+
+                    <TextView
+                        android:id="@+id/status_evacuation_detail"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearance.App.Body" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- TODO(6단계): send the route through NaviHelper. -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/status_evacuation_route"
+                style="@style/Widget.App.Button.Route"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/gap"
+                android:text="@string/evacuation_route"
+                app:icon="@drawable/ic_directions" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.card.MaterialCardView
+        style="@style/Widget.App.Card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/gap">
+
+        <LinearLayout style="@style/Widget.App.CardContent">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/status_responders"
+                android:textAppearance="@style/TextAppearance.App.Title"
+                android:textColor="@color/on_surface" />
+
+            <TextView
+                android:id="@+id/status_notice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/gap_small"
+                android:text="@string/responders_notice"
+                android:textAppearance="@style/TextAppearance.App.BodySecondary" />
+
+            <LinearLayout
+                android:id="@+id/status_responder_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/gap_small"
+                android:orientation="vertical" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/gap"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/status_back"
+            style="@style/Widget.App.Button.Tonal"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/status_back"
+            app:icon="@drawable/ic_warning" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/status_dismiss"
+            style="@style/Widget.App.Button.Tonal"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/gap"
+            android:layout_weight="1"
+            android:text="@string/emergency_dismiss"
+            app:icon="@drawable/ic_close" />
+    </LinearLayout>
+</LinearLayout>

@@ -80,10 +80,10 @@
 
     <string name="mock_banner">테스트 모드 · 실제 신고되지 않습니다</string>
     <string name="step_counter">%1$d / %2$d단계</string>
-    <string name="emergency_report">임시 신고 (테스트)</string>
+    <string name="waiting_for_stop">차량이 멈추면 다음 안내를 시작합니다</string>
+    <string name="emergency_report">SOS 신고 (테스트)</string>
     <string name="emergency_repeat">다시 듣기</string>
     <string name="emergency_dismiss">상황 종료</string>
-    <string name="mock_report_done">임시 신고를 앱에만 기록했습니다. 실제로 전송되지 않았습니다.</string>
     <string name="evacuation_title">대피 경로</string>
     <string name="evacuation_route">경로 안내</string>
     <string name="support_title">주변 도움 시설</string>
@@ -92,7 +92,7 @@
     <string name="emergency_ua">급발진</string>
     <string name="emergency_brake">브레이크 고장</string>
     <string name="emergency_accident">사고</string>
-    <string name="emergency_fire">화재</string>
+    <string name="emergency_fire">차량 화재</string>
     <string name="emergency_flood">침수</string>
     <string name="emergency_tire">타이어 이상</string>
     <string name="emergency_health">운전자 건강 이상</string>
@@ -120,11 +120,11 @@
     <string name="evacuation_secondary">차에 머물지 말고 가드레일 밖 안전지대로 대피하세요</string>
 
     <!-- Steps: unintended acceleration -->
-    <string name="step_ua_brake">브레이크 페달을 한 번에 꽉 밟아 유지하세요. 반복해서 밟지 마세요.</string>
-    <string name="step_ua_neutral">기어를 중립 N으로 바꾸세요.</string>
-    <string name="step_ua_keep_power">시동은 완전히 끄지 마세요. 핸들이 잠길 수 있습니다.</string>
-    <string name="step_ua_parking_brake">전자식 주차 브레이크 스위치를 계속 당겨 속도를 줄이세요.</string>
-    <string name="step_ua_steer">비상등을 켜고 안전한 곳으로 조향하세요.</string>
+    <!-- 팀 확정 음성 대본. 문구를 바꾸지 마세요. -->
+    <string name="step_ua_neutral">시동을 끄지 말고 기어를 중립으로 바꾸세요.</string>
+    <string name="step_ua_brake">브레이크를 꾹 밟으세요.</string>
+    <string name="step_ua_parking_brake">사이드 브레이크를 지속적으로 당기세요.</string>
+    <string name="step_ua_power_off">시동 버튼을 길게 누르거나 빠르게 여러 번 눌러 시동을 끄세요.</string>
 
     <!-- Steps: brake failure -->
     <string name="step_brake_downshift">패들 시프트로 기어를 낮춰 엔진 브레이크를 거세요.</string>
@@ -140,10 +140,11 @@
     <string name="step_accident_report">대피한 뒤 신고하세요.</string>
 
     <!-- Steps: fire -->
-    <string name="step_fire_stop">비상등을 켜고 안전한 곳에 차를 세우세요.</string>
-    <string name="step_fire_engine">시동을 끄고 짐을 챙기지 말고 즉시 대피하세요.</string>
-    <string name="step_fire_hood">보닛을 열지 마세요. 산소가 들어가 불이 커질 수 있습니다.</string>
-    <string name="step_fire_report">충분히 떨어진 안전한 곳에서 신고하세요.</string>
+    <!-- 팀 확정 음성 대본. 문구를 바꾸지 마세요. -->
+    <string name="step_fire_stop">비상등을 켜고 갓길로 이동하세요.</string>
+    <string name="step_fire_engine">시동을 끈 후 즉시 대피하세요.</string>
+    <string name="step_fire_hood">절대로 차량 보닛을 열지 마세요.</string>
+    <string name="step_fire_report">대피 후 안전 거리를 확보한 후 신고하세요.</string>
 
     <!-- Steps: flood -->
     <string name="step_flood_open">물이 타이어 절반까지 차오르기 전에 창문과 선루프를 여세요.</string>
@@ -173,7 +174,9 @@
     <string name="confirm_title">%1$s 상황인가요?</string>
     <string name="confirm_yes">네, 비상상황입니다</string>
     <string name="confirm_no">아니요</string>
-    <string name="confirm_prompt_detected">%1$s 상황이 감지되었습니다. 비상상황이 맞으면 네, 아니면 아니요라고 말씀해 주세요.</string>
+    <!-- %1$s: 상황 이름 + 이/가 (급발진이, 차량 화재가). 첫 문장은 suspected_announcement와 같아야 합니다. -->
+    <string name="confirm_prompt_detected">%1$s 의심됩니다. 비상상황이 맞으면 네, 아니면 아니요라고 말씀해 주세요.</string>
+    <string name="suspected_announcement">%1$s 의심됩니다.</string>
     <string name="confirm_prompt_manual">%1$s 상황을 선택하셨습니다. 비상상황이 맞으면 네, 아니면 아니요라고 말씀해 주세요.</string>
     <string name="confirm_reprompt">잘 듣지 못했습니다. 네 또는 아니요로 답해 주세요.</string>
     <string name="confirm_declined">비상상황이 아니므로 처음 화면으로 돌아갑니다.</string>
@@ -239,4 +242,62 @@
     <string name="route_demo_destination_ahead">%1$s 앞 목적지</string>
     <string name="route_demo_arrived">%1$s에 도착했습니다.</string>
     <string name="route_demo_remaining">남은 거리 %1$s · 약 %2$d분</string>
+
+    <!-- Video mode for the demo video: setting and hidden menu (not on screen while filming) -->
+    <string name="video_mode_switch">영상 모드 (시연 영상 촬영용)</string>
+    <string name="video_mode_hint">켜면 이 탭이 숨겨집니다. 앱 제목을 길게 누르면 촬영 메뉴가 열립니다.</string>
+    <string name="video_menu_title">영상 촬영</string>
+    <string name="video_menu_lead_in">이상 상황 전 정상 주행 시간</string>
+    <string name="video_menu_seconds">%1$d초</string>
+    <string name="video_menu_acceleration">급발진</string>
+    <string name="video_menu_fire">차량 화재</string>
+    <string name="video_menu_collision">충돌</string>
+    <string name="video_menu_off">영상 모드 끄기</string>
+    <string name="video_menu_skip_confirmation">확인 질문 없이 바로 대처 안내</string>
+    <string name="video_menu_staged_voice">음성 신고 연출 (신고 대기 중 화면 두 번 탭)</string>
+
+    <!-- Video mode: natural wording in place of test wording. Reports still reach no one. -->
+    <string name="video_screen_location_unset">위치 이름 미설정</string>
+    <string name="video_screen_emergency_report">SOS 신고</string>
+    <string name="video_screen_report_announcement">119와 112에 신고를 접수했습니다. 현재 위치를 전달했습니다.</string>
+    <string name="video_screen_dispatch_request">출동 요청</string>
+    <string name="video_screen_dispatch_requested">요청됨</string>
+    <string name="video_screen_dispatch_done">%1$s에 출동을 요청했습니다.</string>
+    <string name="video_screen_responders_notice">예상 도착 시간은 교통 상황에 따라 달라질 수 있습니다.</string>
+    <string name="video_screen_reports_label">신고 기록</string>
+    <string name="video_screen_step_health_report">반응이 없으면 즉시 신고하세요. 긴급 신고는 이미 진행되었습니다.</string>
+
+    <!-- One-touch and voice report. Reports go to MockEmergencyReporter only and reach no one. -->
+    <string name="report_prompt">신고가 필요하면 \'신고해 줘\'라고 말씀하시거나 신고 버튼을 누르세요.</string>
+    <string name="report_announcement">119와 112에 신고를 접수했습니다. 현재 위치를 전달했습니다. 테스트 기록이며 실제로 전송되지 않았습니다.</string>
+    <string name="report_voice_listening">듣고 있습니다 · \'신고해 줘\'라고 말씀하세요</string>
+    <string name="report_voice_not_understood">신고 요청을 듣지 못했습니다. 신고 버튼을 눌러 주세요</string>
+    <!-- Shown as recognized speech, also in the video mode stand-in. -->
+    <string name="report_heard">음성 인식: \'%1$s\'</string>
+    <string name="report_staged_phrase">신고해 줘</string>
+    <string name="report_done_button">신고 접수됨</string>
+    <string name="report_receipt_title">신고 접수 완료</string>
+    <string name="report_receipt_agencies">112 · 119 접수</string>
+    <string name="report_receipt_sent">전달한 정보</string>
+    <string name="report_receipt_location">위치</string>
+    <string name="report_receipt_situation">상황</string>
+    <string name="report_receipt_time">시각</string>
+    <string name="report_receipt_speed">차량 속도 기록</string>
+    <string name="report_receipt_speed_value">직전 1분 최고 %1$s · 신고 시 %2$s</string>
+    <string name="report_receipt_test_notice">테스트 기록입니다. 실제로 전송되지 않았습니다.</string>
+    <string name="receipt_open_status">대피·출동 현황 보기</string>
+
+    <!-- Evacuation and dispatch status, after a report. -->
+    <string name="status_title">대피·출동 현황</string>
+    <string name="status_reported">112 · 119 신고 접수 · %1$s</string>
+    <string name="status_step">안내 %1$d/%2$d · %3$s</string>
+    <string name="status_evacuation">대피 장소</string>
+    <string name="status_responders">출동 현황</string>
+    <string name="status_map_caption">내 위치 기준 방향과 거리</string>
+    <string name="status_map_me">내 위치</string>
+    <string name="status_map_north">▲ 북</string>
+    <string name="status_back">대처 안내 보기</string>
+    <!-- A real place for the video that is not set yet (VideoConfig TODO). -->
+    <string name="place_unset">장소 미설정</string>
+    <string name="value_none">—</string>
 </resources>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Wide window: evacuation and dispatch status. The mini map on the left fills the height; the
+    evacuation place and responders on the right. Shown after a report.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/evacuation_status_overlay"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background"
+    android:clickable="true"
+    android:fitsSystemWindows="true"
+    android:focusable="true"
+    android:orientation="vertical"
+    android:padding="@dimen/screen_padding"
+    android:visibility="gone">
+
+    <include layout="@layout/view_status_header" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="@dimen/gap"
+        android:layout_weight="1"
+        android:baselineAligned="false"
+        android:orientation="horizontal">
+
+        <include
+            layout="@layout/view_status_map"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+
+        <ScrollView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="@dimen/gap"
+            android:layout_weight="1">
+
+            <include layout="@layout/view_status_places" />
+        </ScrollView>
+    </LinearLayout>
+</LinearLayout>

@@ -31,6 +31,18 @@ public final class EventRecorder {
         return readings.size();
     }
 
+    /** The highest speed in the kept minute, or null if no reading had one. */
+    @Nullable
+    public Float maxSpeedKph() {
+        Float max = null;
+        for (VehicleSnapshot reading : readings) {
+            if (reading.speedKph != null && (max == null || reading.speedKph > max)) {
+                max = reading.speedKph;
+            }
+        }
+        return max;
+    }
+
     /** File name for a record, for example "20261110_153012_FIRE.json". */
     public static String fileName(EmergencyType type, long wallClockMillis) {
         SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);

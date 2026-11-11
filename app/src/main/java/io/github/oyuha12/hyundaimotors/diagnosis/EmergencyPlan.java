@@ -19,12 +19,12 @@ public final class EmergencyPlan {
     public static List<GuidanceStep> steps(EmergencyType type) {
         switch (type) {
             case UNINTENDED_ACCELERATION:
+                // The team's confirmed voice script. The engine goes off only once the car stops.
                 return Arrays.asList(
-                        new GuidanceStep(R.drawable.ic_footprint, Motion.PRESS, R.string.step_ua_brake),
                         new GuidanceStep("N", Motion.PRESS, R.string.step_ua_neutral),
-                        new GuidanceStep(R.drawable.ic_power_settings_new, Motion.SHAKE, R.string.step_ua_keep_power),
-                        new GuidanceStep("P", Motion.PULL, R.string.step_ua_parking_brake),
-                        new GuidanceStep(R.drawable.ic_directions_car, Motion.SWAY, R.string.step_ua_steer));
+                        new GuidanceStep(R.drawable.ic_footprint, Motion.PRESS, R.string.step_ua_brake),
+                        new GuidanceStep("P", Motion.PULL, R.string.step_ua_parking_brake).untilStopped(),
+                        new GuidanceStep(R.drawable.ic_power_settings_new, Motion.PULSE, R.string.step_ua_power_off));
             case BRAKE_FAILURE:
                 return Arrays.asList(
                         new GuidanceStep("−", Motion.PRESS, R.string.step_brake_downshift),
@@ -39,8 +39,9 @@ public final class EmergencyPlan {
                         new GuidanceStep(R.drawable.ic_emergency, Motion.PULL, R.string.step_accident_triangle),
                         new GuidanceStep(R.drawable.ic_sos, Motion.PULSE, R.string.step_accident_report));
             case FIRE:
+                // The team's confirmed voice script. Evacuation starts only once the car stops.
                 return Arrays.asList(
-                        new GuidanceStep(R.drawable.ic_warning, Motion.BLINK, R.string.step_fire_stop),
+                        new GuidanceStep(R.drawable.ic_warning, Motion.BLINK, R.string.step_fire_stop).untilStopped(),
                         new GuidanceStep(R.drawable.ic_directions_walk, Motion.MOVE_AWAY, R.string.step_fire_engine),
                         new GuidanceStep(R.drawable.ic_do_not_touch, Motion.SHAKE, R.string.step_fire_hood),
                         new GuidanceStep(R.drawable.ic_sos, Motion.PULSE, R.string.step_fire_report));

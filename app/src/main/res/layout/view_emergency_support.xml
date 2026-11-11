@@ -58,7 +58,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/evacuation_route"
-                style="@style/Widget.App.Button.Danger"
+                style="@style/Widget.App.Button.Route"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/gap_large"
@@ -92,6 +92,7 @@
                 android:textColor="@color/on_surface" />
 
             <TextView
+                android:id="@+id/responders_notice"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/gap_small"

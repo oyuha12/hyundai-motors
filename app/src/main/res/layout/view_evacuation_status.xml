@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Narrow window: evacuation and dispatch status, stacked. Shown after a report. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/evacuation_status_overlay"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background"
+    android:clickable="true"
+    android:fillViewport="true"
+    android:fitsSystemWindows="true"
+    android:focusable="true"
+    android:visibility="gone">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/screen_padding">
+
+        <include layout="@layout/view_status_header" />
+
+        <include
+            layout="@layout/view_status_map"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/gap" />
+
+        <include
+            layout="@layout/view_status_places"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/gap" />
+    </LinearLayout>
+</ScrollView>

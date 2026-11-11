@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+    Situation header and the current step. The red header panel is the only red area; the step
+    picture, progress and text sit large in the middle of the card. In wide windows the card
+    stretches to the window height and centers its content.
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -15,8 +21,10 @@
         android:padding="@dimen/card_padding">
 
         <TextView
+            android:id="@+id/emergency_mock_banner"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/gap_large"
             android:background="@drawable/bg_pill_outline"
             android:paddingHorizontal="16dp"
             android:paddingVertical="6dp"
@@ -27,7 +35,6 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/gap_large"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -65,10 +72,13 @@
     <com.google.android.material.card.MaterialCardView
         style="@style/Widget.App.Card"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/gap_large">
+        android:layout_height="0dp"
+        android:layout_marginTop="@dimen/gap"
+        android:layout_weight="1">
 
-        <LinearLayout style="@style/Widget.App.CardContent">
+        <LinearLayout
+            style="@style/Widget.App.CardContent"
+            android:layout_height="match_parent">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -91,23 +101,24 @@
                     android:layout_weight="1"
                     app:indicatorColor="@color/negative"
                     app:trackColor="@color/surface_variant"
-                    app:trackCornerRadius="4dp"
-                    app:trackThickness="8dp" />
+                    app:trackCornerRadius="6dp"
+                    app:trackThickness="12dp" />
             </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/gap_large"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:paddingTop="@dimen/gap_large">
 
-                <!-- Step picture. The inner frame loops a short motion while parked. -->
+                <!-- Step picture: a red sign on a neutral tile. It loops a motion while parked. -->
                 <FrameLayout
                     android:layout_width="@dimen/step_symbol_size"
                     android:layout_height="@dimen/step_symbol_size"
                     android:background="@drawable/bg_chip"
-                    android:backgroundTint="@color/emergency_critical"
+                    android:backgroundTint="@color/surface_variant"
                     android:clipChildren="true">
 
                     <FrameLayout
@@ -117,80 +128,43 @@
 
                         <ImageView
                             android:id="@+id/emergency_step_icon"
-                            android:layout_width="72dp"
-                            android:layout_height="72dp"
+                            android:layout_width="@dimen/step_icon_size"
+                            android:layout_height="@dimen/step_icon_size"
                             android:layout_gravity="center"
                             android:importantForAccessibility="no"
-                            app:tint="@color/on_emergency" />
+                            app:tint="@color/negative" />
 
                         <TextView
                             android:id="@+id/emergency_symbol"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
-                            android:textAppearance="@style/TextAppearance.App.Headline"
-                            android:textColor="@color/on_emergency" />
+                            android:textAppearance="@style/TextAppearance.App.StepSymbol"
+                            android:textColor="@color/negative" />
                     </FrameLayout>
                 </FrameLayout>
 
                 <TextView
                     android:id="@+id/emergency_step"
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/gap_large"
-                    android:layout_weight="1"
-                    android:lineHeight="50sp"
+                    android:layout_marginTop="@dimen/gap_large"
+                    android:gravity="center"
                     android:maxLines="4"
-                    android:textAppearance="@style/TextAppearance.App.TitleLarge" />
+                    android:textAppearance="@style/TextAppearance.App.StepText" />
+
+                <!-- Shown after a step that waits for the car to stop, until it has. -->
+                <TextView
+                    android:id="@+id/emergency_waiting_for_stop"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/gap"
+                    android:gravity="center"
+                    android:text="@string/waiting_for_stop"
+                    android:textAppearance="@style/TextAppearance.App.Label"
+                    android:textColor="@color/on_surface_variant"
+                    android:visibility="gone" />
             </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/gap"
-        android:orientation="horizontal">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/emergency_report"
-            style="@style/Widget.App.Button.Emergency"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/emergency_report"
-            app:icon="@drawable/ic_sos" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/emergency_repeat"
-            style="@style/Widget.App.Button.EmergencyOutlined"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/gap"
-            android:layout_weight="1"
-            android:text="@string/emergency_repeat"
-            app:icon="@drawable/ic_volume_up" />
-    </LinearLayout>
-
-    <TextView
-        android:id="@+id/emergency_report_status"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/gap"
-        android:background="@drawable/bg_chip"
-        android:backgroundTint="@color/success_container"
-        android:padding="@dimen/gap"
-        android:text="@string/mock_report_done"
-        android:textAppearance="@style/TextAppearance.App.Body"
-        android:textColor="@color/on_surface"
-        android:visibility="gone" />
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/emergency_dismiss"
-        style="@style/Widget.App.Button.EmergencyOutlined"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/gap"
-        android:text="@string/emergency_dismiss"
-        app:icon="@drawable/ic_close" />
 </LinearLayout>

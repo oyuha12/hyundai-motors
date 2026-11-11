@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Mini map: the car in the middle, the evacuation place and responders by direction and
+    distance, north up. Drawn by the app; no map data or external map. In wide windows it
+    stretches to the window height.
+-->
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Widget.App.Card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        style="@style/Widget.App.CardContent"
+        android:layout_height="match_parent"
+        android:padding="@dimen/gap_large">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/status_map_caption"
+            android:textAppearance="@style/TextAppearance.App.Label"
+            android:textColor="@color/on_surface_variant" />
+
+        <io.github.oyuha12.hyundaimotors.ResponseMapView
+            android:id="@+id/status_map"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="@dimen/gap_small"
+            android:layout_weight="1"
+            android:importantForAccessibility="no"
+            android:minHeight="@dimen/status_map_min_height" />
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>
