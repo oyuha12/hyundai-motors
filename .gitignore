@@ -1,0 +1,25 @@
+# Gradle / build
+.gradle/
+build/
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Local machine settings
+local.properties
+
+# Android Studio
+*.iml
+.idea/
+
+# Signing keys and secrets: never commit
+*.jks
+*.keystore
+keystore.properties
+secrets.properties
+
+# Debug APKs (release APK goes in apk/)
+*.apk
+!apk/*_release.apk
+*.aab

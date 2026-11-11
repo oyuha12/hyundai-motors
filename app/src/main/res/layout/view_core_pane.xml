@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Drowsiness reminder. A side feature: a small static card, never a full screen. -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/drowsy_banner"
+            style="@style/Widget.App.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/gap"
+            android:visibility="gone"
+            app:cardBackgroundColor="@color/primary_container">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="@dimen/card_padding"
+                android:paddingTop="@dimen/gap"
+                android:paddingEnd="@dimen/gap"
+                android:paddingBottom="@dimen/gap">
+
+                <ImageView
+                    android:layout_width="@dimen/icon_size"
+                    android:layout_height="@dimen/icon_size"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_bedtime"
+                    app:tint="@color/on_primary_container" />
+
+                <TextView
+                    android:id="@+id/drowsy_text"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/gap"
+                    android:layout_weight="1"
+                    android:maxLines="3"
+                    android:textAppearance="@style/TextAppearance.App.Body"
+                    android:textColor="@color/on_primary_container" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/drowsy_close"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minHeight="@dimen/touch_target"
+                    android:text="@string/drowsy_close"
+                    android:textAppearance="@style/TextAppearance.App.Label"
+                    android:textColor="@color/on_primary_container" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Status: one glance tells whether anything is wrong. -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/status_card"
+            style="@style/Widget.App.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout style="@style/Widget.App.CardContent">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/status_icon"
+                        android:layout_width="@dimen/icon_size_large"
+                        android:layout_height="@dimen/icon_size_large"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_check_circle"
+                        app:tint="@color/success" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/gap_large"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/core_value"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/status_normal"
+                            android:textAppearance="@style/TextAppearance.App.Headline" />
+
+                        <TextView
+                            android:id="@+id/core_caption"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:maxLines="2"
+                            android:textAppearance="@style/TextAppearance.App.BodySecondary" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <com.google.android.material.divider.MaterialDivider
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/gap_large"
+                    android:layout_marginBottom="@dimen/gap_large"
+                    app:dividerColor="@color/outline" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal">
+
+                    <LinearLayout style="@style/Widget.App.Metric">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/label_speed"
+                            android:textAppearance="@style/TextAppearance.App.LabelSmall"
+                            android:textColor="@color/on_surface_variant" />
+
+                        <TextView
+                            android:id="@+id/tile_speed"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:maxLines="1"
+                            android:text="@string/value_unknown"
+                            android:textAppearance="@style/TextAppearance.App.Title"
+                            android:textColor="@color/on_surface" />
+                    </LinearLayout>
+
+                    <LinearLayout style="@style/Widget.App.Metric">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/label_gear"
+                            android:textAppearance="@style/TextAppearance.App.LabelSmall"
+                            android:textColor="@color/on_surface_variant" />
+
+                        <TextView
+                            android:id="@+id/tile_gear"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:maxLines="1"
+                            android:text="@string/value_unknown"
+                            android:textAppearance="@style/TextAppearance.App.Title"
+                            android:textColor="@color/on_surface" />
+                    </LinearLayout>
+
+                    <LinearLayout style="@style/Widget.App.Metric">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/label_brake"
+                            android:textAppearance="@style/TextAppearance.App.LabelSmall"
+                            android:textColor="@color/on_surface_variant" />
+
+                        <TextView
+                            android:id="@+id/tile_brake"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:maxLines="1"
+                            android:text="@string/value_unknown"
+                            android:textAppearance="@style/TextAppearance.App.Title"
+                            android:textColor="@color/on_surface" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Situation buttons: one touch opens the response screen. -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/section_gap"
+            android:text="@string/situation_title"
+            android:textAppearance="@style/TextAppearance.App.Title" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/gap_small"
+            android:text="@string/situation_caption"
+            android:textAppearance="@style/TextAppearance.App.BodySecondary" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/gap_large"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/select_ua"
+                style="@style/Widget.App.Button.Situation"
+                android:text="@string/situation_ua"
+                app:icon="@drawable/ic_speed" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/select_accident"
+                style="@style/Widget.App.Button.Situation"
+                android:layout_marginStart="@dimen/gap"
+                android:text="@string/situation_accident"
+                app:icon="@drawable/ic_car_crash" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/gap"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/select_fire"
+                style="@style/Widget.App.Button.Situation"
+                android:text="@string/situation_fire"
+                app:icon="@drawable/ic_local_fire_department" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/select_flood"
+                style="@style/Widget.App.Button.Situation"
+                android:layout_marginStart="@dimen/gap"
+                android:text="@string/situation_flood"
+                app:icon="@drawable/ic_flood" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/gap_large"
+            android:text="@string/situation_more"
+            android:textAppearance="@style/TextAppearance.App.Label"
+            android:textColor="@color/on_surface_variant" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/gap_small"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/select_brake"
+                style="@style/Widget.App.Button.SituationSmall"
+                android:text="@string/situation_brake"
+                app:icon="@drawable/ic_taxi_alert" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/select_tire"
+                style="@style/Widget.App.Button.SituationSmall"
+                android:layout_marginStart="@dimen/gap_small"
+                android:text="@string/situation_tire"
+                app:icon="@drawable/ic_tire_repair" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/select_health"
+                style="@style/Widget.App.Button.SituationSmall"
+                android:layout_marginStart="@dimen/gap_small"
+                android:text="@string/situation_health"
+                app:icon="@drawable/ic_ecg_heart" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/select_secondary"
+                style="@style/Widget.App.Button.SituationSmall"
+                android:layout_marginStart="@dimen/gap_small"
+                android:text="@string/situation_secondary"
+                app:icon="@drawable/ic_minor_crash" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

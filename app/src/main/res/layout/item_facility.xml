@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Facility card: who, how far, how soon they can arrive, and what to do.
+    Top: icon, name and distance, estimated arrival. Bottom: mock dispatch and route buttons.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="@dimen/gap"
+    android:paddingBottom="@dimen/gap">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <FrameLayout
+            android:layout_width="@dimen/facility_icon_container"
+            android:layout_height="@dimen/facility_icon_container"
+            android:background="@drawable/bg_icon_circle"
+            android:backgroundTint="@color/surface_variant">
+
+            <ImageView
+                android:id="@+id/facility_icon"
+                android:layout_width="@dimen/icon_size"
+                android:layout_height="@dimen/icon_size"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                app:tint="@color/on_surface" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/gap_large"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/facility_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textAppearance="@style/TextAppearance.App.BodyStrong" />
+
+            <TextView
+                android:id="@+id/facility_detail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textAppearance="@style/TextAppearance.App.BodySecondary" />
+        </LinearLayout>
+
+        <!-- Estimated arrival. Hidden for places that do not send anyone. -->
+        <LinearLayout
+            android:id="@+id/facility_eta_box"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/gap"
+            android:background="@drawable/bg_chip"
+            android:backgroundTint="@color/primary_container"
+            android:gravity="end"
+            android:minWidth="160dp"
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingVertical="12dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/facility_eta_caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawablePadding="6dp"
+                android:gravity="center_vertical"
+                android:maxLines="1"
+                android:textAppearance="@style/TextAppearance.App.LabelSmall"
+                android:textColor="@color/on_primary_container" />
+
+            <TextView
+                android:id="@+id/facility_eta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:textAppearance="@style/TextAppearance.App.TitleLarge"
+                android:textColor="@color/on_primary_container" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/gap"
+        android:orientation="horizontal">
+
+        <!-- TEST ONLY: records a mock report addressed to this facility. -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/facility_dispatch"
+            style="@style/Widget.App.Button.Danger"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="@dimen/gap"
+            android:layout_weight="1"
+            android:text="@string/dispatch_request"
+            android:visibility="gone"
+            app:icon="@drawable/ic_sos" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/facility_route"
+            style="@style/Widget.App.Button.Tonal"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/route_button"
+            app:icon="@drawable/ic_directions" />
+    </LinearLayout>
+</LinearLayout>

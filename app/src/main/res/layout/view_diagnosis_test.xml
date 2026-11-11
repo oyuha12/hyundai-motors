@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/test_title"
+            android:textAppearance="@style/TextAppearance.App.Title" />
+
+        <TextView
+            android:id="@+id/test_notice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/gap_small"
+            android:text="@string/test_driving_notice"
+            android:textAppearance="@style/TextAppearance.App.BodySecondary"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/test_controls"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Demo settings for recording videos on a PC emulator. -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.App.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/gap"
+                app:cardBackgroundColor="@color/primary_container">
+
+                <LinearLayout style="@style/Widget.App.CardContent">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/demo_settings_title"
+                        android:textAppearance="@style/TextAppearance.App.Label"
+                        android:textColor="@color/on_primary_container" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_demo_route"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/gap_small"
+                        android:minHeight="@dimen/touch_target"
+                        android:text="@string/demo_route_switch"
+                        android:textAppearance="@style/TextAppearance.App.Body"
+                        android:textColor="@color/on_primary_container" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_demo_location"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="@dimen/touch_target"
+                        android:text="@string/demo_location_switch"
+                        android:textAppearance="@style/TextAppearance.App.Body"
+                        android:textColor="@color/on_primary_container" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/gap_large"
+                android:text="@string/test_description"
+                android:textAppearance="@style/TextAppearance.App.BodySecondary" />
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.App.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/gap_large">
+
+                <LinearLayout style="@style/Widget.App.CardContent">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/scenario_ua"
+                        style="@style/Widget.App.Button.Tonal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="start|center_vertical"
+                        android:text="@string/scenario_ua"
+                        app:icon="@drawable/ic_speed" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/scenario_collision"
+                        style="@style/Widget.App.Button.Tonal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/gap"
+                        android:gravity="start|center_vertical"
+                        android:text="@string/scenario_collision"
+                        app:icon="@drawable/ic_car_crash" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/scenario_airbag"
+                        style="@style/Widget.App.Button.Tonal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/gap"
+                        android:gravity="start|center_vertical"
+                        android:text="@string/scenario_airbag"
+                        app:icon="@drawable/ic_warning" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/scenario_fire"
+                        style="@style/Widget.App.Button.Tonal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/gap"
+                        android:gravity="start|center_vertical"
+                        android:text="@string/scenario_fire"
+                        app:icon="@drawable/ic_local_fire_department" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/scenario_brake"
+                        style="@style/Widget.App.Button.Tonal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/gap"
+                        android:gravity="start|center_vertical"
+                        android:text="@string/scenario_brake"
+                        app:icon="@drawable/ic_taxi_alert" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/scenario_tire"
+                        style="@style/Widget.App.Button.Tonal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/gap"
+                        android:gravity="start|center_vertical"
+                        android:text="@string/scenario_tire"
+                        app:icon="@drawable/ic_tire_repair" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/gap_large"
+                        android:text="@string/test_warnings_title"
+                        android:textAppearance="@style/TextAppearance.App.Label"
+                        android:textColor="@color/on_surface_variant" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/scenario_pedal"
+                        style="@style/Widget.App.Button.Tonal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/gap"
+                        android:gravity="start|center_vertical"
+                        android:text="@string/scenario_pedal"
+                        app:icon="@drawable/ic_footprint" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/scenario_reverse"
+                        style="@style/Widget.App.Button.Tonal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/gap"
+                        android:gravity="start|center_vertical"
+                        android:text="@string/scenario_reverse"
+                        app:icon="@drawable/ic_directions_car" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/scenario_curve"
+                        style="@style/Widget.App.Button.Tonal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/gap"
+                        android:gravity="start|center_vertical"
+                        android:text="@string/scenario_curve"
+                        app:icon="@drawable/ic_speed" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/scenario_drowsy"
+                        style="@style/Widget.App.Button.Tonal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/gap"
+                        android:gravity="start|center_vertical"
+                        android:text="@string/scenario_drowsy"
+                        app:icon="@drawable/ic_bedtime" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/scenario_stop"
+                        style="@style/Widget.App.Button.Outlined"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/gap"
+                        android:text="@string/scenario_stop"
+                        app:icon="@drawable/ic_close" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/gap_large"
+                android:text="@string/test_flood_notice"
+                android:textAppearance="@style/TextAppearance.App.BodySecondary" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

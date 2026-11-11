@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Asta Sans, the Pleos Connect system UI font (42dot, SIL Open Font License 1.1).
+    Static Regular and Bold instances from Google Fonts. License: licenses/AstaSans-OFL.txt
+-->
+<font-family xmlns:android="http://schemas.android.com/apk/res/android">
+    <font
+        android:font="@font/asta_sans_regular"
+        android:fontStyle="normal"
+        android:fontWeight="400" />
+    <font
+        android:font="@font/asta_sans_bold"
+        android:fontStyle="normal"
+        android:fontWeight="700" />
+</font-family>

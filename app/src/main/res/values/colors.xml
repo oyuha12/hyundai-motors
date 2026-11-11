@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Colors follow the Pleos Connect design guide (document.pleos.ai → Basic rules → Colors):
+    a neutral grayscale (basic_00 … basic_900) with informative colors as the only accents.
+    Light values here, dark values in values-night.
+-->
+<resources>
+    <!-- Pleos informative_positive: selection, progress, routes. -->
+    <color name="primary">#0064FF</color>
+    <color name="on_primary">#FFFFFF</color>
+
+    <!-- Pleos neutral containers (surface_high / surface_accent). -->
+    <color name="primary_container">#EDEEF2</color>
+    <color name="on_primary_container">#131417</color>
+    <color name="secondary_container">#EDEEF2</color>
+    <color name="on_secondary_container">#131417</color>
+
+    <!-- background, surface_basic, surface_high -->
+    <color name="background">#F7F8FA</color>
+    <color name="on_background">#131417</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="on_surface">#131417</color>
+    <color name="surface_variant">#EDEEF2</color>
+    <!-- basic_500: secondary text, 5.3:1 on white. -->
+    <color name="on_surface_variant">#686A72</color>
+    <color name="outline">#E0E1E6</color>
+
+    <!-- button_filled_enabled / pressed -->
+    <color name="button_filled">#44464E</color>
+    <color name="on_button_filled">#FFFFFF</color>
+
+    <!-- Pleos informative_active, darkened to 3:1 on white for icons. -->
+    <color name="success">#00A35A</color>
+    <color name="success_container">#E0F5EA</color>
+
+    <!-- Pleos informative_negative, darkened to 4.5:1 on white for text and icons on surfaces. -->
+    <color name="negative">#D62E0A</color>
+
+    <!-- Popup dim -->
+    <color name="dim">#99000000</color>
+
+    <!--
+        Emergency panels: a deeper informative_negative, the same in light and dark themes,
+        so white text keeps 6:1 contrast.
+    -->
+    <color name="emergency_critical">#B8290B</color>
+    <color name="emergency_container">#8F1F08</color>
+    <color name="on_emergency">#FFFFFF</color>
+    <color name="on_emergency_variant">#FFE0D9</color>
+</resources>

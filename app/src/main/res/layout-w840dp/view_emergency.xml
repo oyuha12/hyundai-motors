@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wide window: guidance on the left, evacuation route and nearby help on the right. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/emergency_overlay"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background"
+    android:baselineAligned="false"
+    android:clickable="true"
+    android:fitsSystemWindows="true"
+    android:focusable="true"
+    android:orientation="horizontal"
+    android:padding="@dimen/screen_padding"
+    android:visibility="gone">
+
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1">
+
+        <include layout="@layout/view_emergency_guidance" />
+    </ScrollView>
+
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="@dimen/section_gap"
+        android:layout_weight="1">
+
+        <include layout="@layout/view_emergency_support" />
+    </ScrollView>
+</LinearLayout>
