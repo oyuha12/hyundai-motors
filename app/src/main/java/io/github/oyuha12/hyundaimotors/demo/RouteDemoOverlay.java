@@ -38,6 +38,7 @@ public final class RouteDemoOverlay {
     private final TextView instruction;
     private final TextView remaining;
     private final MaterialButton pause;
+    private final View notice;
     private final Speaker speaker;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Set<Float> announced = new HashSet<>();
@@ -76,6 +77,7 @@ public final class RouteDemoOverlay {
         instruction = root.findViewById(R.id.route_demo_instruction);
         remaining = root.findViewById(R.id.route_demo_remaining);
         pause = root.findViewById(R.id.route_demo_pause);
+        notice = root.findViewById(R.id.route_demo_notice);
         pause.setOnClickListener(v -> setPlaying(!playing));
         root.findViewById(R.id.route_demo_restart).setOnClickListener(v -> restart());
         root.findViewById(R.id.route_demo_close).setOnClickListener(v -> close());
@@ -89,6 +91,11 @@ public final class RouteDemoOverlay {
         root.setVisibility(View.VISIBLE);
         restart();
         speaker.say(root.getContext().getString(R.string.route_demo_start, facility.name));
+    }
+
+    /** Video mode hides the "demo route" notice. */
+    public void setVideoMode(boolean on) {
+        notice.setVisibility(on ? View.GONE : View.VISIBLE);
     }
 
     public boolean isShowing() {

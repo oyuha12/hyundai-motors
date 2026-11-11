@@ -13,8 +13,12 @@ import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 import io.github.oyuha12.hyundaimotors.data.FakeDrivingStateSource;
+import io.github.oyuha12.hyundaimotors.demo.VideoConfig;
+import io.github.oyuha12.hyundaimotors.demo.VideoMode;
+import io.github.oyuha12.hyundaimotors.demo.VideoWording;
 import io.github.oyuha12.hyundaimotors.diagnosis.Detection;
 import io.github.oyuha12.hyundaimotors.diagnosis.EmergencyDetector;
 import io.github.oyuha12.hyundaimotors.diagnosis.EmergencyPlan;
@@ -27,10 +31,13 @@ import io.github.oyuha12.hyundaimotors.facility.ResponseEstimator;
 import io.github.oyuha12.hyundaimotors.facility.RouteNavigator;
 import io.github.oyuha12.hyundaimotors.facility.SampleFacilityRepository;
 import io.github.oyuha12.hyundaimotors.guidance.AnswerClassifier;
+import io.github.oyuha12.hyundaimotors.guidance.GuidanceSequencer;
 import io.github.oyuha12.hyundaimotors.guidance.GuidanceSpeaker;
+import io.github.oyuha12.hyundaimotors.guidance.KoreanParticle;
 import io.github.oyuha12.hyundaimotors.guidance.VoiceAnswerListener;
 import io.github.oyuha12.hyundaimotors.report.EventRecorder;
 import io.github.oyuha12.hyundaimotors.report.MockEmergencyReporter;
+import io.github.oyuha12.hyundaimotors.telemetry.GeoPoint;
 import io.github.oyuha12.hyundaimotors.telemetry.PleosTelemetrySource;
 import io.github.oyuha12.hyundaimotors.telemetry.SimulatedTelemetrySource;
 import io.github.oyuha12.hyundaimotors.telemetry.TelemetrySource;
@@ -54,6 +61,9 @@ import java.util.concurrent.Executors;
  * <p>Flow: a detection or a situation button first asks "is this an emergency?" by voice and on
  * screen. "Yes" opens the situation screen; "no" returns home. A detected condition that goes
  * back to normal also returns home.
+ *
+ * <p>Guidance steps follow one another as they are read, but a step that waits for the car to
+ * stop holds the next one until the speed is below 1 km/h ({@link GuidanceSequencer}).
  */
 public final class MainViewModel extends AndroidViewModel {
     /** An emergency in progress: what it is, why it was raised, and whether it is confirmed. */
@@ -76,10 +86,6 @@ public final class MainViewModel extends AndroidViewModel {
             return new ActiveEmergency(type, reason, detected, true);
         }
     }
-
-    /** Used only while no position is available, and shown as such on screen. */
-    private static final double SAMPLE_LATITUDE = 37.48544722;
-    private static final double SAMPLE_LONGITUDE = 127.03636666;
 
     private static final long MAX_STEP_MILLIS = 10_000L;
     private static final long STEP_PAUSE_MILLIS = 700L;
@@ -105,6 +111,7 @@ public final class MainViewModel extends AndroidViewModel {
     private final GuidanceSpeaker speaker;
     private final VoiceAnswerListener voice;
     private final RouteNavigator navigator;
+    private final GuidanceSequencer sequencer;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     private final MutableLiveData<VehicleSnapshot> snapshot = new MutableLiveData<>();
@@ -120,13 +127,22 @@ public final class MainViewModel extends AndroidViewModel {
     private final MutableLiveData<Integer> drowsinessAlert = new MutableLiveData<>(0);
     private final MutableLiveData<Integer> eventRecordCount = new MutableLiveData<>(0);
     private final MutableLiveData<Facility> demoRouteRequest = new MutableLiveData<>();
+    /** After a step that waits for the car to stop, until it has. */
+    private final MutableLiveData<Boolean> waitingForStop = new MutableLiveData<>(false);
+    private final MutableLiveData<Boolean> videoMode = new MutableLiveData<>(false);
+    /** Shown driving state: the manual toggle, or in video mode the (simulated) speed. */
+    private final MediatorLiveData<Boolean> driving = new MediatorLiveData<>();
+    private boolean drivingBySpeed;
+    /** The location SDK's last fix. Simulations in video mode keep the car here. */
+    @Nullable private GeoPoint lastSdkPosition;
 
     private TelemetrySource vehicleSource;
-    @Nullable private TelemetrySource simulation;
+    @Nullable private SimulatedTelemetrySource simulation;
     @Nullable private EmergencyType dismissed;
     private final Runnable stepTimeout = this::advanceStep;
     private final Runnable countdownTick = this::tickCountdown;
-    private List<GuidanceStep> steps;
+    /** Read just before the first step, then cleared. */
+    @Nullable private String guidanceLead;
     private int questionsAsked;
     /** Increases with every new question, so late voice callbacks can be ignored. */
     private int questionId;
@@ -142,6 +158,22 @@ public final class MainViewModel extends AndroidViewModel {
         speaker = new GuidanceSpeaker(application);
         voice = new VoiceAnswerListener(application);
         navigator = new RouteNavigator(application);
+        sequencer = new GuidanceSequencer(new GuidanceSequencer.Listener() {
+            @Override
+            public void onStep(int index, GuidanceStep step) {
+                speakStep(index, step);
+                // A video scenario pulls over once the guidance asks the driver to stop.
+                if (step.waitsForStop && simulation != null) simulation.startStopping();
+            }
+
+            @Override
+            public void onWaitingForStop(boolean waiting) {
+                waitingForStop.setValue(waiting);
+            }
+        });
+        videoMode.setValue(demoPrefs().getBoolean(KEY_VIDEO_MODE, false));
+        driving.addSource(drivingState.isDriving(), value -> refreshDriving());
+        driving.addSource(videoMode, value -> refreshDriving());
         io.execute(this::countEventRecords);
         startVehicleSource();
     }
@@ -149,6 +181,10 @@ public final class MainViewModel extends AndroidViewModel {
     private void startVehicleSource() {
         vehicleSource = new PleosTelemetrySource(getApplication());
         vehicleSource.start(reading -> {
+            // Kept even while a simulation runs, so in video mode the simulated car stays where
+            // the SDK says.
+            GeoPoint position = GeoPoint.of(reading);
+            if (position != null) lastSdkPosition = position;
             if (simulation == null) onReading(reading);
         });
     }
@@ -162,14 +198,20 @@ public final class MainViewModel extends AndroidViewModel {
     private void onReading(VehicleSnapshot reading) {
         snapshot.setValue(reading);
         eventRecorder.add(reading);
+        sequencer.onSpeed(reading.speedKph);
+        drivingBySpeed = VideoMode.isDrivingBySpeed(reading.speedKph);
+        boolean video = isVideoMode();
+        if (video) refreshDriving();
         Detection detected = detector.evaluate(reading);
         ActiveEmergency current = emergency.getValue();
 
         if (current != null) {
-            checkBackToNormal(current, reading, detected);
+            // Video mode: the screen stays until "상황 종료", even after the car stops.
+            if (!video) checkBackToNormal(current, reading, detected);
             return;
         }
-        checkDrivingAlerts(reading);
+        // Video mode: no drowsiness or driver mistake reminders from the scripted data.
+        if (!video) checkDrivingAlerts(reading);
         if (detected == null) {
             dismissed = null;
             return;
@@ -189,17 +231,24 @@ public final class MainViewModel extends AndroidViewModel {
 
     private void askToConfirm(ActiveEmergency pending) {
         stopAllSpeech();
+        sequencer.stop();
+        if (VideoMode.skipsConfirmation(
+                isVideoMode(), pending.detected, isVideoSkipConfirmation())) {
+            // Video mode: "급발진이 의심됩니다." and straight into the guidance.
+            clearSituation();
+            saveEventRecord(pending);
+            startGuidance(pending.asConfirmed(), getApplication().getString(
+                    R.string.suspected_announcement, suspectedSubject(pending.type)));
+            return;
+        }
         emergency.setValue(pending);
-        lastReport.setValue(null);
-        dispatches.setValue(Collections.emptyMap());
-        navigator.clearStatus();
-        drowsinessAlert.setValue(0);
-        normalSince = -1L;
+        clearSituation();
         questionsAsked = 0;
-        String situation = getApplication().getString(EmergencyPlan.title(pending.type));
-        ask(getApplication().getString(
-                pending.detected ? R.string.confirm_prompt_detected : R.string.confirm_prompt_manual,
-                situation));
+        ask(pending.detected
+                ? getApplication().getString(
+                        R.string.confirm_prompt_detected, suspectedSubject(pending.type))
+                : getApplication().getString(R.string.confirm_prompt_manual,
+                        getApplication().getString(EmergencyPlan.title(pending.type))));
         if (pending.detected) {
             saveEventRecord(pending);
             countdown.setValue(NO_ANSWER_SECONDS);
@@ -207,6 +256,21 @@ public final class MainViewModel extends AndroidViewModel {
         } else {
             countdown.setValue(-1);
         }
+    }
+
+    /** Clears what the previous situation left on screen. */
+    private void clearSituation() {
+        lastReport.setValue(null);
+        dispatches.setValue(Collections.emptyMap());
+        navigator.clearStatus();
+        drowsinessAlert.setValue(0);
+        normalSince = -1L;
+    }
+
+    /** "급발진이", "차량 화재가": the name in "○○이(가) 의심됩니다". */
+    private String suspectedSubject(EmergencyType type) {
+        return KoreanParticle.subject(
+                getApplication().getString(EmergencyPlan.suspectedName(type)));
     }
 
     private void ask(String question) {
@@ -278,11 +342,20 @@ public final class MainViewModel extends AndroidViewModel {
         ActiveEmergency current = emergency.getValue();
         if (current == null || current.confirmed) return;
         stopAllSpeech();
-        emergency.setValue(current.asConfirmed());
         if (!current.detected) saveEventRecord(current);
-        if (EmergencyPlan.reportsOnConfirm(current.type)) submitMockReport();
-        steps = EmergencyPlan.steps(current.type);
-        speakStep(0);
+        startGuidance(current.asConfirmed(), null);
+    }
+
+    /**
+     * Shows the situation screen and starts reading its steps.
+     *
+     * @param lead read just before the first step, in the same utterance
+     */
+    private void startGuidance(ActiveEmergency confirmed, @Nullable String lead) {
+        emergency.setValue(confirmed);
+        if (EmergencyPlan.reportsOnConfirm(confirmed.type)) submitMockReport();
+        guidanceLead = lead;
+        sequencer.start(EmergencyPlan.steps(confirmed.type));
     }
 
     /** "No", by voice or touch. Returns to the home screen. */
@@ -292,10 +365,14 @@ public final class MainViewModel extends AndroidViewModel {
 
     // ---- Guidance -----------------------------------------------------------------------------
 
-    private void speakStep(int index) {
+    private void speakStep(int index, GuidanceStep step) {
         handler.removeCallbacks(stepTimeout);
         stepIndex.setValue(index);
-        String text = getApplication().getString(steps.get(index).text);
+        String text = getApplication().getString(VideoWording.pick(step.text, isVideoMode()));
+        if (guidanceLead != null) {
+            text = guidanceLead + " " + text;
+            guidanceLead = null;
+        }
         speaker.speak(text, () -> {
             handler.removeCallbacks(stepTimeout);
             handler.postDelayed(stepTimeout, STEP_PAUSE_MILLIS);
@@ -303,19 +380,18 @@ public final class MainViewModel extends AndroidViewModel {
         handler.postDelayed(stepTimeout, MAX_STEP_MILLIS);
     }
 
+    /** The step was read: the next one, or first wait for the car to stop. */
     private void advanceStep() {
-        Integer index = stepIndex.getValue();
         ActiveEmergency current = emergency.getValue();
         if (current == null || !current.confirmed) return;
-        if (steps == null || index == null || index + 1 >= steps.size()) return;
-        speakStep(index + 1);
+        sequencer.onStepSpoken();
     }
 
     public void repeatGuidance() {
         ActiveEmergency current = emergency.getValue();
-        if (steps == null || current == null || !current.confirmed) return;
+        if (current == null || !current.confirmed) return;
         speaker.stop();
-        speakStep(0);
+        sequencer.start(EmergencyPlan.steps(current.type));
     }
 
     /** "상황 종료" on the situation screen. */
@@ -339,6 +415,7 @@ public final class MainViewModel extends AndroidViewModel {
         ActiveEmergency current = emergency.getValue();
         stopAllSpeech();
         dismissed = current != null && current.detected ? current.type : null;
+        sequencer.stop();
         emergency.setValue(null);
         lastReport.setValue(null);
         dispatches.setValue(Collections.emptyMap());
@@ -439,6 +516,15 @@ public final class MainViewModel extends AndroidViewModel {
     }
 
     public void startScenario(SimulatedTelemetrySource.Scenario scenario) {
+        startSimulation(scenario, 0L);
+    }
+
+    /** Video mode: plays a scenario after the chosen lead-in of normal driving. */
+    public void startVideoScenario(SimulatedTelemetrySource.Scenario scenario) {
+        startSimulation(scenario, getVideoLeadInSeconds() * 1000L);
+    }
+
+    private void startSimulation(SimulatedTelemetrySource.Scenario scenario, long leadInMillis) {
         stopSimulation();
         detector.reset();
         dismissed = null;
@@ -446,7 +532,8 @@ public final class MainViewModel extends AndroidViewModel {
         if (scenario == SimulatedTelemetrySource.Scenario.MONOTONOUS_DRIVE) {
             drowsiness.setConfig(DrowsinessMonitor.DEMO);
         }
-        simulation = new SimulatedTelemetrySource(scenario);
+        simulation = new SimulatedTelemetrySource(scenario, leadInMillis,
+                () -> VideoMode.simulationPosition(isVideoMode(), lastSdkPosition));
         simulation.start(this::onReading);
     }
 
@@ -469,17 +556,26 @@ public final class MainViewModel extends AndroidViewModel {
 
     /** False when the demo location is on, so screens say they use the sample location. */
     public boolean hasRealLocation() {
-        if (isDemoLocationEnabled()) return false;
+        if (usesDemoLocation()) return false;
         VehicleSnapshot reading = snapshot.getValue();
         return reading != null && reading.hasLocation();
     }
 
+    /** Whether facility distances use the fixed demo position. Never in video mode. */
+    public boolean usesDemoLocation() {
+        return VideoMode.usesDemoLocation(isVideoMode(), isDemoLocationEnabled());
+    }
+
     private double latitude() {
-        return hasRealLocation() ? snapshot.getValue().latitude : SAMPLE_LATITUDE;
+        return hasRealLocation()
+                ? snapshot.getValue().latitude
+                : VideoConfig.FALLBACK_POSITION.latitude;
     }
 
     private double longitude() {
-        return hasRealLocation() ? snapshot.getValue().longitude : SAMPLE_LONGITUDE;
+        return hasRealLocation()
+                ? snapshot.getValue().longitude
+                : VideoConfig.FALLBACK_POSITION.longitude;
     }
 
     public List<Facility> nearbyFacilities() {
@@ -581,6 +677,55 @@ public final class MainViewModel extends AndroidViewModel {
         speaker.speak(text, null);
     }
 
+    // ---- Video mode for the demo video ---------------------------------------------------------
+
+    private static final String KEY_VIDEO_MODE = "video_mode";
+    private static final String KEY_VIDEO_LEAD_IN = "video_lead_in_seconds";
+    private static final String KEY_VIDEO_SKIP_CONFIRMATION = "video_skip_confirmation";
+
+    public LiveData<Boolean> getVideoMode() {
+        return videoMode;
+    }
+
+    public boolean isVideoMode() {
+        return Boolean.TRUE.equals(videoMode.getValue());
+    }
+
+    /** Saved, off by default. Switching either way stops a running demo. */
+    public void setVideoMode(boolean on) {
+        if (on == isVideoMode()) return;
+        demoPrefs().edit().putBoolean(KEY_VIDEO_MODE, on).apply();
+        stopScenario();
+        videoMode.setValue(on);
+    }
+
+    /** Normal driving before a video scenario, one of {@link VideoConfig#LEAD_IN_SECONDS}. */
+    public int getVideoLeadInSeconds() {
+        return VideoMode.leadInSeconds(
+                demoPrefs().getInt(KEY_VIDEO_LEAD_IN, VideoConfig.DEFAULT_LEAD_IN_SECONDS));
+    }
+
+    public void setVideoLeadInSeconds(int seconds) {
+        demoPrefs().edit().putInt(KEY_VIDEO_LEAD_IN, VideoMode.leadInSeconds(seconds)).apply();
+    }
+
+    /** Video mode: a detection goes straight to the guidance, without "네/아니요". On by default. */
+    public boolean isVideoSkipConfirmation() {
+        return demoPrefs().getBoolean(
+                KEY_VIDEO_SKIP_CONFIRMATION, VideoConfig.DEFAULT_SKIP_CONFIRMATION);
+    }
+
+    public void setVideoSkipConfirmation(boolean skip) {
+        demoPrefs().edit().putBoolean(KEY_VIDEO_SKIP_CONFIRMATION, skip).apply();
+    }
+
+    private void refreshDriving() {
+        boolean value = isVideoMode()
+                ? drivingBySpeed
+                : Boolean.TRUE.equals(drivingState.isDriving().getValue());
+        if (!Boolean.valueOf(value).equals(driving.getValue())) driving.setValue(value);
+    }
+
     // ---- Observables --------------------------------------------------------------------------
 
     public LiveData<RouteNavigator.Status> getRouteStatus() {
@@ -597,6 +742,10 @@ public final class MainViewModel extends AndroidViewModel {
 
     public LiveData<Integer> getStepIndex() {
         return stepIndex;
+    }
+
+    public LiveData<Boolean> getWaitingForStop() {
+        return waitingForStop;
     }
 
     public LiveData<MockEmergencyReporter.Report> getLastReport() {
@@ -619,8 +768,9 @@ public final class MainViewModel extends AndroidViewModel {
         return reporter.getReports().size();
     }
 
+    /** The manual toggle, or in video mode whether the (simulated) car is moving. */
     public LiveData<Boolean> isDriving() {
-        return drivingState.isDriving();
+        return driving;
     }
 
     public void toggleDriving() {

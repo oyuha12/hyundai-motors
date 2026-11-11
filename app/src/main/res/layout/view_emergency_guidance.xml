@@ -15,8 +15,10 @@
         android:padding="@dimen/card_padding">
 
         <TextView
+            android:id="@+id/emergency_mock_banner"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/gap_large"
             android:background="@drawable/bg_pill_outline"
             android:paddingHorizontal="16dp"
             android:paddingVertical="6dp"
@@ -27,7 +29,6 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/gap_large"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -143,6 +144,17 @@
                     android:maxLines="4"
                     android:textAppearance="@style/TextAppearance.App.TitleLarge" />
             </LinearLayout>
+
+            <!-- Shown after a step that waits for the car to stop, until it has. -->
+            <TextView
+                android:id="@+id/emergency_waiting_for_stop"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/gap"
+                android:text="@string/waiting_for_stop"
+                android:textAppearance="@style/TextAppearance.App.Label"
+                android:textColor="@color/on_surface_variant"
+                android:visibility="gone" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 

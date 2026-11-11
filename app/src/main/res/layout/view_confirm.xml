@@ -36,8 +36,10 @@
                 android:padding="@dimen/popup_padding">
 
                 <TextView
+                    android:id="@+id/confirm_mock_banner"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/gap_large"
                     android:background="@drawable/bg_chip"
                     android:backgroundTint="@color/surface_variant"
                     android:paddingHorizontal="16dp"
@@ -49,7 +51,6 @@
                 <FrameLayout
                     android:layout_width="112dp"
                     android:layout_height="112dp"
-                    android:layout_marginTop="@dimen/gap_large"
                     android:background="@drawable/bg_icon_circle"
                     android:backgroundTint="@color/emergency_critical">
 

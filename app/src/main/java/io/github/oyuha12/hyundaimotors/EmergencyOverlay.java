@@ -6,7 +6,9 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
+import io.github.oyuha12.hyundaimotors.demo.VideoWording;
 import io.github.oyuha12.hyundaimotors.diagnosis.EmergencyPlan;
 import io.github.oyuha12.hyundaimotors.diagnosis.EmergencyType;
 import io.github.oyuha12.hyundaimotors.diagnosis.GuidanceStep;
@@ -41,7 +43,12 @@ final class EmergencyOverlay {
     private Map<String, Long> dispatched = Collections.emptyMap();
     private final ImageView stepIcon;
     private final StepAnimator stepAnimator;
+    private final View mockBanner;
+    private final MaterialButton reportButton;
+    private final TextView respondersNotice;
+    private final View waitingForStop;
     private boolean motionAllowed;
+    private boolean videoMode;
     @Nullable private EmergencyType shown;
 
     EmergencyOverlay(View root, MainViewModel viewModel) {
@@ -64,8 +71,12 @@ final class EmergencyOverlay {
         facilityList = root.findViewById(R.id.support_facility_list);
         stepIcon = root.findViewById(R.id.emergency_step_icon);
         stepAnimator = new StepAnimator(root.findViewById(R.id.emergency_step_visual));
+        mockBanner = root.findViewById(R.id.emergency_mock_banner);
+        reportButton = root.findViewById(R.id.emergency_report);
+        respondersNotice = root.findViewById(R.id.responders_notice);
+        waitingForStop = root.findViewById(R.id.emergency_waiting_for_stop);
 
-        root.findViewById(R.id.emergency_report).setOnClickListener(v -> viewModel.submitMockReport());
+        reportButton.setOnClickListener(v -> viewModel.submitMockReport());
         root.findViewById(R.id.emergency_repeat).setOnClickListener(v -> viewModel.repeatGuidance());
         root.findViewById(R.id.emergency_dismiss).setOnClickListener(v -> viewModel.dismissEmergency());
     }
@@ -91,7 +102,7 @@ final class EmergencyOverlay {
         }
 
         FacilityUi.fillList(facilityList, viewModel.supportFacilities(active.type),
-                viewModel::navigateTo, viewModel::requestDispatch);
+                viewModel::navigateTo, viewModel::requestDispatch, videoMode);
         showDispatches(viewModel.getDispatches().getValue());
     }
 
@@ -110,8 +121,21 @@ final class EmergencyOverlay {
         } else {
             symbol.setText(step.symbol);
         }
-        stepText.setText(step.text);
+        stepText.setText(VideoWording.pick(step.text, videoMode));
         stepAnimator.show(step.motion);
+    }
+
+    /** "차량이 멈추면 다음 안내를 시작합니다" while the next step waits for the car to stop. */
+    void showWaitingForStop(@Nullable Boolean waiting) {
+        waitingForStop.setVisibility(Boolean.TRUE.equals(waiting) ? View.VISIBLE : View.GONE);
+    }
+
+    /** Video mode: no test banner, and natural wording for the mock report. */
+    void setVideoMode(boolean on) {
+        videoMode = on;
+        mockBanner.setVisibility(on ? View.GONE : View.VISIBLE);
+        reportButton.setText(VideoWording.pick(R.string.emergency_report, on));
+        respondersNotice.setText(VideoWording.pick(R.string.responders_notice, on));
     }
 
     /** Motion runs only while parked and while the screen is visible. */
@@ -129,8 +153,9 @@ final class EmergencyOverlay {
         reportStatus.setVisibility(report == null ? View.GONE : View.VISIBLE);
         if (report == null) return;
         reportStatus.setText(report.facilityName == null
-                ? root.getContext().getString(R.string.mock_report_done)
-                : root.getContext().getString(R.string.mock_dispatch_done, report.facilityName));
+                ? root.getContext().getString(VideoWording.pick(R.string.mock_report_done, videoMode))
+                : root.getContext().getString(
+                        VideoWording.pick(R.string.mock_dispatch_done, videoMode), report.facilityName));
     }
 
     /** Refreshes arrival estimates and, once a request is made, counts down every second. */
@@ -143,7 +168,7 @@ final class EmergencyOverlay {
     private final Runnable countdownTick = new Runnable() {
         @Override
         public void run() {
-            FacilityUi.updateArrivals(facilityList, dispatched);
+            FacilityUi.updateArrivals(facilityList, dispatched, videoMode);
             if (!dispatched.isEmpty() && root.getVisibility() == View.VISIBLE) {
                 root.postDelayed(this, 1_000L);
             }

@@ -11,6 +11,7 @@ import androidx.annotation.DrawableRes;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import com.google.android.material.button.MaterialButton;
+import io.github.oyuha12.hyundaimotors.demo.VideoWording;
 import io.github.oyuha12.hyundaimotors.diagnosis.EmergencyType;
 import io.github.oyuha12.hyundaimotors.facility.Facility;
 import io.github.oyuha12.hyundaimotors.facility.ResponseEstimator;
@@ -29,12 +30,14 @@ final class FacilityUi {
      * Fills a list with facility cards.
      *
      * @param dispatch null hides the mock dispatch button, as on the plain facility list
+     * @param videoMode natural wording instead of test wording
      */
     static void fillList(
             ViewGroup list,
             Iterable<Facility> facilities,
             FacilityAction route,
-            @Nullable FacilityAction dispatch) {
+            @Nullable FacilityAction dispatch,
+            boolean videoMode) {
         list.removeAllViews();
         LayoutInflater inflater = LayoutInflater.from(list.getContext());
         for (Facility facility : facilities) {
@@ -51,15 +54,16 @@ final class FacilityUi {
             if (canDispatch) dispatchButton.setOnClickListener(v -> dispatch.run(facility));
             list.addView(row);
         }
-        updateArrivals(list, Collections.emptyMap());
+        updateArrivals(list, Collections.emptyMap(), videoMode);
     }
 
     /**
      * Shows each card's arrival: the estimate before a request, a countdown after one.
      *
      * @param dispatched facility name to expected arrival on the elapsedRealtime clock
+     * @param videoMode natural wording instead of test wording
      */
-    static void updateArrivals(ViewGroup list, Map<String, Long> dispatched) {
+    static void updateArrivals(ViewGroup list, Map<String, Long> dispatched, boolean videoMode) {
         Context context = list.getContext();
         long now = SystemClock.elapsedRealtime();
         for (int i = 0; i < list.getChildCount(); i++) {
@@ -78,7 +82,7 @@ final class FacilityUi {
                 caption.setText(R.string.eta_caption_estimate);
                 eta.setText(context.getString(R.string.eta_minutes, minutes));
                 dispatchButton.setEnabled(true);
-                dispatchButton.setText(R.string.dispatch_request);
+                dispatchButton.setText(VideoWording.pick(R.string.dispatch_request, videoMode));
             } else {
                 long left = Math.max(0, arrivalAt - now);
                 caption.setText(left == 0 ? R.string.eta_caption_arrived : R.string.eta_caption_countdown);
@@ -86,7 +90,7 @@ final class FacilityUi {
                         ? context.getString(R.string.eta_arrived)
                         : context.getString(R.string.eta_countdown, left / 60_000, (left / 1000) % 60));
                 dispatchButton.setEnabled(false);
-                dispatchButton.setText(R.string.dispatch_requested);
+                dispatchButton.setText(VideoWording.pick(R.string.dispatch_requested, videoMode));
             }
         }
     }

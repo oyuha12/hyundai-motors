@@ -92,6 +92,7 @@
                 android:textColor="@color/on_surface" />
 
             <TextView
+                android:id="@+id/responders_notice"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/gap_small"

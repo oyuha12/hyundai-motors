@@ -11,14 +11,20 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.navigation.NavigationBarView;
 import io.github.oyuha12.hyundaimotors.demo.RouteDemoOverlay;
+import io.github.oyuha12.hyundaimotors.demo.VideoConfig;
+import io.github.oyuha12.hyundaimotors.demo.VideoWording;
 import io.github.oyuha12.hyundaimotors.diagnosis.EmergencyType;
 import io.github.oyuha12.hyundaimotors.facility.Facility;
 import io.github.oyuha12.hyundaimotors.facility.RouteNavigator;
@@ -57,7 +63,9 @@ public class MainActivity extends AppCompatActivity {
     private TextView detailLocation;
     private TextView detailCabin;
     private TextView detailReports;
+    private TextView detailReportsLabel;
     private View detailPane; // Only present in wide windows.
+    private MaterialSwitch videoModeSwitch;
     private View homeContent;
     private View nearbyContent;
     private View testContent;
@@ -120,6 +128,81 @@ public class MainActivity extends AppCompatActivity {
             routeDemo.show(facility);
             viewModel.onDemoRouteShown();
         });
+
+        videoModeSwitch = findViewById(R.id.switch_video_mode);
+        videoModeSwitch.setChecked(viewModel.isVideoMode());
+        videoModeSwitch.setOnCheckedChangeListener((button, checked) -> viewModel.setVideoMode(checked));
+        // Hidden trigger for filming: long-press the app title. Does nothing outside video mode.
+        findViewById(R.id.app_title).setOnLongClickListener(view -> {
+            if (!viewModel.isVideoMode()) return false;
+            showVideoMenu();
+            return true;
+        });
+    }
+
+    /**
+     * The small demo menu: a scenario, the lead-in before it, whether to skip the yes/no
+     * question, or video mode off. Choosing closes
+     * the menu at once, so nothing of it stays on screen while filming.
+     */
+    private void showVideoMenu() {
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View content = inflater.inflate(R.layout.view_video_menu, null, false);
+        ChipGroup leadIns = content.findViewById(R.id.video_lead_in);
+        int selected = viewModel.getVideoLeadInSeconds();
+        for (int seconds : VideoConfig.LEAD_IN_SECONDS) {
+            Chip chip = (Chip) inflater.inflate(R.layout.item_video_lead_in, leadIns, false);
+            chip.setId(View.generateViewId());
+            chip.setText(getString(R.string.video_menu_seconds, seconds));
+            leadIns.addView(chip);
+            chip.setChecked(seconds == selected);
+            chip.setOnCheckedChangeListener((button, checked) -> {
+                if (checked) viewModel.setVideoLeadInSeconds(seconds);
+            });
+        }
+
+        MaterialSwitch skipConfirmation = content.findViewById(R.id.video_skip_confirmation);
+        skipConfirmation.setChecked(viewModel.isVideoSkipConfirmation());
+        skipConfirmation.setOnCheckedChangeListener(
+                (button, checked) -> viewModel.setVideoSkipConfirmation(checked));
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.video_menu_title)
+                .setView(content)
+                .create();
+        bindVideoScenario(content, dialog, R.id.video_scenario_acceleration, VideoConfig.SCENARIO_ACCELERATION);
+        bindVideoScenario(content, dialog, R.id.video_scenario_fire, VideoConfig.SCENARIO_FIRE);
+        bindVideoScenario(content, dialog, R.id.video_scenario_third, VideoConfig.SCENARIO_THIRD);
+        content.findViewById(R.id.video_mode_off).setOnClickListener(view -> {
+            dialog.dismiss();
+            viewModel.setVideoMode(false);
+        });
+        dialog.show();
+    }
+
+    private void bindVideoScenario(View menu, AlertDialog dialog, int buttonId, Scenario scenario) {
+        menu.findViewById(buttonId).setOnClickListener(view -> {
+            dialog.dismiss();
+            viewModel.startVideoScenario(scenario);
+        });
+    }
+
+    /** Video mode hides test-only controls and wording. Off, everything is as before. */
+    private void renderVideoMode(boolean on) {
+        toggleDriving.setVisibility(on ? View.GONE : View.VISIBLE);
+        videoModeSwitch.setChecked(on);
+        NavigationBarView navigation = findViewById(R.id.navigation);
+        navigation.getMenu().findItem(R.id.nav_test).setVisible(!on);
+        if (on && navigation.getSelectedItemId() == R.id.nav_test) {
+            navigation.setSelectedItemId(R.id.nav_home);
+        }
+        setDetail(detailReportsLabel, getString(VideoWording.pick(R.string.detail_reports_label, on)));
+        overlay.setVideoMode(on);
+        confirmOverlay.setVideoMode(on);
+        routeDemo.setVideoMode(on);
+        renderFacilities();
+        VehicleSnapshot latest = viewModel.getSnapshot().getValue();
+        if (latest != null) renderSnapshot(latest);
     }
 
     private void bindViews() {
@@ -135,6 +218,7 @@ public class MainActivity extends AppCompatActivity {
         detailLocation = findViewById(R.id.detail_location);
         detailCabin = findViewById(R.id.detail_cabin);
         detailReports = findViewById(R.id.detail_reports);
+        detailReportsLabel = findViewById(R.id.detail_reports_label);
         homeContent = findViewById(R.id.home_content);
         nearbyContent = findViewById(R.id.nearby_content);
         testContent = findViewById(R.id.test_content);
@@ -188,9 +272,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void observe() {
         viewModel.isDriving().observe(this, this::renderDrivingState);
+        viewModel.getVideoMode().observe(this, on -> renderVideoMode(Boolean.TRUE.equals(on)));
         viewModel.getSnapshot().observe(this, this::renderSnapshot);
         viewModel.getEmergency().observe(this, this::renderEmergency);
         viewModel.getStepIndex().observe(this, overlay::showStep);
+        viewModel.getWaitingForStop().observe(this, overlay::showWaitingForStop);
         setDetail(detailReports, getString(R.string.mock_report_count, viewModel.getMockReportCount()));
         viewModel.getLastReport().observe(this, report -> {
             overlay.showReport(report);
@@ -243,10 +329,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void renderFacilities() {
+        boolean video = viewModel.isVideoMode();
+        nearbyNotice.setVisibility(video ? View.GONE : View.VISIBLE);
         nearbyNotice.setText(viewModel.hasRealLocation()
                 ? R.string.nearby_notice_real_location
                 : R.string.nearby_notice_sample_location);
-        FacilityUi.fillList(facilityList, viewModel.nearbyFacilities(), viewModel::navigateTo, null);
+        FacilityUi.fillList(
+                facilityList, viewModel.nearbyFacilities(), viewModel::navigateTo, null, video);
     }
 
     private void renderEmergency(MainViewModel.ActiveEmergency active) {
@@ -272,14 +361,23 @@ public class MainActivity extends AppCompatActivity {
         tileBrake.setText(snapshot.brakePressed == null
                 ? getString(R.string.value_unknown)
                 : getString(snapshot.brakePressed ? R.string.brake_on : R.string.brake_off));
-        setDetail(detailLocation, viewModel.isDemoLocationEnabled()
-                ? getString(R.string.demo_location_label)
-                : snapshot.hasLocation()
-                ? String.format(Locale.US, "%.4f, %.4f", snapshot.latitude, snapshot.longitude)
-                : getString(R.string.value_unknown));
+        setDetail(detailLocation, locationLabel(snapshot));
         setDetail(detailCabin, snapshot.cabinTemperatureC == null
                 ? getString(R.string.value_unknown)
                 : getString(R.string.temperature_c, Math.round(snapshot.cabinTemperatureC)));
+    }
+
+    /** Video mode shows a place name; otherwise the demo label or the coordinates. */
+    private String locationLabel(VehicleSnapshot snapshot) {
+        if (viewModel.isVideoMode()) {
+            return VideoConfig.LOCATION_NAME != null
+                    ? VideoConfig.LOCATION_NAME
+                    : getString(R.string.video_screen_location_unset);
+        }
+        if (viewModel.usesDemoLocation()) return getString(R.string.demo_location_label);
+        return snapshot.hasLocation()
+                ? String.format(Locale.US, "%.4f, %.4f", snapshot.latitude, snapshot.longitude)
+                : getString(R.string.value_unknown);
     }
 
     /** The detail pane exists only in wide windows. */
