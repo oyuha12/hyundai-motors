@@ -285,4 +285,19 @@
     <string name="report_receipt_speed">차량 속도 기록</string>
     <string name="report_receipt_speed_value">직전 1분 최고 %1$s · 신고 시 %2$s</string>
     <string name="report_receipt_test_notice">테스트 기록입니다. 실제로 전송되지 않았습니다.</string>
+    <string name="receipt_open_status">대피·출동 현황 보기</string>
+
+    <!-- Evacuation and dispatch status, after a report. -->
+    <string name="status_title">대피·출동 현황</string>
+    <string name="status_reported">112 · 119 신고 접수 · %1$s</string>
+    <string name="status_step">안내 %1$d/%2$d · %3$s</string>
+    <string name="status_evacuation">대피 장소</string>
+    <string name="status_responders">출동 현황</string>
+    <string name="status_map_caption">내 위치 기준 방향과 거리</string>
+    <string name="status_map_me">내 위치</string>
+    <string name="status_map_north">▲ 북</string>
+    <string name="status_back">대처 안내 보기</string>
+    <!-- A real place for the video that is not set yet (VideoConfig TODO). -->
+    <string name="place_unset">장소 미설정</string>
+    <string name="value_none">—</string>
 </resources>

@@ -35,7 +35,10 @@ public final class ReportFlow {
          */
         void onReport(Trigger trigger, @Nullable String heard);
 
-        /** Reported, announced and guidance read to the end: move on to the status screen. */
+        /**
+         * Show the evacuation and dispatch status: right after the announcement, or for a report
+         * made without one, once the guidance has been read to the end.
+         */
         void onReportFinished();
     }
 
@@ -46,6 +49,8 @@ public final class ReportFlow {
     private boolean guidanceFinished;
     private boolean reported;
     private boolean announced;
+    /** Reported without an announcement, so the guidance is not cut short. */
+    private boolean silent;
     private boolean finishedSent;
 
     public ReportFlow(Listener listener) {
@@ -58,6 +63,7 @@ public final class ReportFlow {
         guidanceFinished = false;
         reported = false;
         announced = false;
+        silent = false;
         finishedSent = false;
     }
 
@@ -66,6 +72,7 @@ public final class ReportFlow {
         offer = Offer.NONE;
         reported = true;
         announced = true;
+        silent = true;
     }
 
     /** The last guidance step has been read. Offers a report unless one was made. */
@@ -139,7 +146,7 @@ public final class ReportFlow {
     }
 
     private void sendFinishedIfDone() {
-        if (finishedSent || !guidanceFinished || !announced) return;
+        if (finishedSent || !announced || (silent && !guidanceFinished)) return;
         finishedSent = true;
         listener.onReportFinished();
     }

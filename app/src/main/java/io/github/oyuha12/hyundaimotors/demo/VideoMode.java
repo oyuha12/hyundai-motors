@@ -19,12 +19,22 @@ public final class VideoMode {
 
     /**
      * Where a simulation puts the car. In video mode, the location SDK's last fix, so the
-     * emulator's Location setting is what the video shows. Outside video mode null, which keeps
-     * the sample position simulations always used.
+     * emulator's Location setting is what the video shows, or the filming location before the
+     * first fix. Outside video mode null, which keeps the sample position simulations always used.
      */
     @Nullable
     public static GeoPoint simulationPosition(boolean videoMode, @Nullable GeoPoint sdkPosition) {
-        return videoMode ? sdkPosition : null;
+        if (!videoMode) return null;
+        return sdkPosition != null ? sdkPosition : VideoConfig.FILMING.position();
+    }
+
+    /**
+     * Where distances are measured from when no position is known: in video mode the filming
+     * location once it is set, otherwise the sample position.
+     */
+    public static GeoPoint fallbackPosition(boolean videoMode) {
+        GeoPoint filming = VideoConfig.FILMING.position();
+        return videoMode && filming != null ? filming : VideoConfig.FALLBACK_POSITION;
     }
 
     /**

@@ -144,5 +144,14 @@
             android:text="@string/report_receipt_test_notice"
             android:textAppearance="@style/TextAppearance.App.LabelSmall"
             android:textColor="@color/on_surface_variant" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/receipt_open_status"
+            style="@style/Widget.App.Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/gap"
+            android:text="@string/receipt_open_status"
+            app:icon="@drawable/ic_location_on" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

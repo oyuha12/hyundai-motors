@@ -1,6 +1,5 @@
 package io.github.oyuha12.hyundaimotors.facility;
 
-import androidx.annotation.Nullable;
 import io.github.oyuha12.hyundaimotors.facility.Facility.Type;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -11,7 +10,7 @@ import java.util.List;
  * The Pleos SDK has no facility search. Replace this with a real place search before release:
  * these places do not exist.
  */
-public final class SampleFacilityRepository {
+public final class SampleFacilityRepository implements FacilityRepository {
     private static final double METERS_PER_DEGREE_LATITUDE = 111_320d;
 
     private static final Object[][] SAMPLES = {
@@ -31,6 +30,7 @@ public final class SampleFacilityRepository {
     };
 
     /** Returns all sample facilities, nearest first. */
+    @Override
     public List<Facility> findNearby(double latitude, double longitude) {
         List<Facility> facilities = new ArrayList<>();
         double metersPerDegreeLongitude =
@@ -49,23 +49,5 @@ public final class SampleFacilityRepository {
         }
         facilities.sort(Comparator.comparingInt(facility -> facility.distanceMeters));
         return facilities;
-    }
-
-    @Nullable
-    public Facility nearest(Type type, double latitude, double longitude) {
-        for (Facility facility : findNearby(latitude, longitude)) {
-            if (facility.type == type) return facility;
-        }
-        return null;
-    }
-
-    /** The nearest facility of each type, in the order given. Types with none are skipped. */
-    public List<Facility> nearestOfEach(List<Type> types, double latitude, double longitude) {
-        List<Facility> result = new ArrayList<>();
-        for (Type type : types) {
-            Facility facility = nearest(type, latitude, longitude);
-            if (facility != null) result.add(facility);
-        }
-        return result;
     }
 }

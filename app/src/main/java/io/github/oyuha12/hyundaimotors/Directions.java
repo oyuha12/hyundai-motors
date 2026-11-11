@@ -10,9 +10,14 @@ final class Directions {
     static String describe(Context context, Facility facility) {
         String[] names = context.getResources().getStringArray(R.array.compass_directions);
         int sector = Math.round(facility.bearingDegrees / 45f) % names.length;
-        String distance = facility.distanceMeters >= 1_000
-                ? context.getString(R.string.distance_km, facility.distanceMeters / 1000f)
-                : context.getString(R.string.distance_m, facility.distanceMeters);
-        return context.getString(R.string.distance_direction, distance, names[sector]);
+        return context.getString(R.string.distance_direction,
+                distance(context, facility.distanceMeters), names[sector]);
+    }
+
+    /** Example: "300m" or "1.4km". */
+    static String distance(Context context, int meters) {
+        return meters >= 1_000
+                ? context.getString(R.string.distance_km, meters / 1000f)
+                : context.getString(R.string.distance_m, meters);
     }
 }

@@ -18,6 +18,7 @@ import androidx.lifecycle.MutableLiveData;
 import io.github.oyuha12.hyundaimotors.data.FakeDrivingStateSource;
 import io.github.oyuha12.hyundaimotors.demo.VideoConfig;
 import io.github.oyuha12.hyundaimotors.demo.VideoMode;
+import io.github.oyuha12.hyundaimotors.demo.VideoPlace;
 import io.github.oyuha12.hyundaimotors.demo.VideoWording;
 import io.github.oyuha12.hyundaimotors.diagnosis.Detection;
 import io.github.oyuha12.hyundaimotors.diagnosis.EmergencyDetector;
@@ -29,7 +30,9 @@ import io.github.oyuha12.hyundaimotors.drowsiness.DrowsinessMonitor;
 import io.github.oyuha12.hyundaimotors.facility.Facility;
 import io.github.oyuha12.hyundaimotors.facility.ResponseEstimator;
 import io.github.oyuha12.hyundaimotors.facility.RouteNavigator;
+import io.github.oyuha12.hyundaimotors.facility.FacilityRepository;
 import io.github.oyuha12.hyundaimotors.facility.SampleFacilityRepository;
+import io.github.oyuha12.hyundaimotors.facility.StatusPlace;
 import io.github.oyuha12.hyundaimotors.guidance.AnswerClassifier;
 import io.github.oyuha12.hyundaimotors.guidance.GuidanceSequencer;
 import io.github.oyuha12.hyundaimotors.guidance.GuidanceSpeaker;
@@ -49,6 +52,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -118,7 +122,9 @@ public final class MainViewModel extends AndroidViewModel {
     private final DrivingWarningMonitor drivingWarnings = new DrivingWarningMonitor();
     private final EventRecorder eventRecorder = new EventRecorder();
     private final ExecutorService io = Executors.newSingleThreadExecutor();
-    private final SampleFacilityRepository facilities = new SampleFacilityRepository();
+    private final SampleFacilityRepository sampleFacilities = new SampleFacilityRepository();
+    /** The real places of the demo video. Places still marked TODO are left out. */
+    private final FacilityRepository videoFacilities = VideoPlace.repositoryOf(VideoConfig.PLACES);
     private final MockEmergencyReporter reporter = new MockEmergencyReporter();
     private final GuidanceSpeaker speaker;
     private final VoiceAnswerListener voice;
@@ -148,8 +154,8 @@ public final class MainViewModel extends AndroidViewModel {
     private final MutableLiveData<String> heardReport = new MutableLiveData<>();
     /** Listening for a spoken report, as a string resource, or 0. */
     private final MutableLiveData<Integer> reportVoiceStatus = new MutableLiveData<>(0);
-    /** True once the report is done: where the evacuation and dispatch status screen opens. */
-    private final MutableLiveData<Boolean> evacuationStatusRequest = new MutableLiveData<>(false);
+    /** The evacuation and dispatch status screen, shown once a report has been announced. */
+    private final MutableLiveData<Boolean> evacuationStatusShown = new MutableLiveData<>(false);
     private final MutableLiveData<Boolean> videoMode = new MutableLiveData<>(false);
     /** Shown driving state: the manual toggle, or in video mode the (simulated) speed. */
     private final MediatorLiveData<Boolean> driving = new MediatorLiveData<>();
@@ -221,7 +227,7 @@ public final class MainViewModel extends AndroidViewModel {
 
             @Override
             public void onReportFinished() {
-                evacuationStatusRequest.setValue(true);
+                evacuationStatusShown.setValue(true);
             }
         });
         videoMode.setValue(demoPrefs().getBoolean(KEY_VIDEO_MODE, false));
@@ -326,7 +332,7 @@ public final class MainViewModel extends AndroidViewModel {
         reportReceipt.setValue(null);
         heardReport.setValue(null);
         reportVoiceStatus.setValue(0);
-        evacuationStatusRequest.setValue(false);
+        evacuationStatusShown.setValue(false);
     }
 
     /** "급발진이", "차량 화재가": the name in "○○이(가) 의심됩니다". */
@@ -646,12 +652,17 @@ public final class MainViewModel extends AndroidViewModel {
         long now = System.currentTimeMillis();
         VehicleSnapshot reading = snapshot.getValue();
         Float speed = reading == null ? null : reading.speedKph;
-        lastReport.setValue(reporter.submit(
+        MockEmergencyReporter.Report report = reporter.submit(
                 active.type,
                 now,
                 reading == null ? null : reading.latitude,
                 reading == null ? null : reading.longitude,
-                speed));
+                speed);
+        // 112 and 119 send police, fire and ambulance at once; their countdowns start now.
+        for (StatusPlace responder : responderStatus(active.type)) {
+            if (responder.facility != null) dispatch(active.type, responder.facility);
+        }
+        lastReport.setValue(report);
         reportReceipt.setValue(new ReportReceipt(
                 active.type, now, locationLabel(reading), eventRecorder.maxSpeedKph(), speed));
         if (!announce) return;
@@ -720,23 +731,29 @@ public final class MainViewModel extends AndroidViewModel {
         return VideoMode.usesDemoLocation(isVideoMode(), isDemoLocationEnabled());
     }
 
+    /** Distances are measured from the SDK position, or from the fallback before it arrives. */
     private double latitude() {
         return hasRealLocation()
                 ? snapshot.getValue().latitude
-                : VideoConfig.FALLBACK_POSITION.latitude;
+                : VideoMode.fallbackPosition(isVideoMode()).latitude;
     }
 
     private double longitude() {
         return hasRealLocation()
                 ? snapshot.getValue().longitude
-                : VideoConfig.FALLBACK_POSITION.longitude;
+                : VideoMode.fallbackPosition(isVideoMode()).longitude;
+    }
+
+    /** Video mode uses the video's real places, otherwise the sample facilities. */
+    private FacilityRepository facilities() {
+        return isVideoMode() ? videoFacilities : sampleFacilities;
     }
 
     /** Where the car is, as the home screen shows it: a place name in video mode. */
     public String locationLabel(@Nullable VehicleSnapshot reading) {
         if (isVideoMode()) {
-            return VideoConfig.LOCATION_NAME != null
-                    ? VideoConfig.LOCATION_NAME
+            return VideoConfig.FILMING.name != null
+                    ? VideoConfig.FILMING.name
                     : getApplication().getString(R.string.video_screen_location_unset);
         }
         if (usesDemoLocation()) return getApplication().getString(R.string.demo_location_label);
@@ -746,18 +763,40 @@ public final class MainViewModel extends AndroidViewModel {
     }
 
     public List<Facility> nearbyFacilities() {
-        return facilities.findNearby(latitude(), longitude());
+        return facilities().findNearby(latitude(), longitude());
     }
 
     @Nullable
     public Facility evacuationTarget(EmergencyType type) {
-        return facilities.nearest(EmergencyPlan.evacuationTarget(type), latitude(), longitude());
+        return facilities().nearest(evacuationType(type), latitude(), longitude());
+    }
+
+    /** The video has one evacuation place for every situation. */
+    private Facility.Type evacuationType(EmergencyType type) {
+        return isVideoMode() ? Facility.Type.EVACUATION_SITE : EmergencyPlan.evacuationTarget(type);
+    }
+
+    /** The evacuation line of the status screen, also when its place is not set. */
+    public StatusPlace evacuationStatus(EmergencyType type) {
+        return new StatusPlace(evacuationType(type), evacuationTarget(type));
+    }
+
+    /**
+     * Who 112 and 119 send: police, fire station and, unless the video leaves it out, hospital
+     * (ambulance). Places that are not set keep their line.
+     */
+    public List<StatusPlace> responderStatus(EmergencyType type) {
+        List<Facility.Type> types = isVideoMode() && !VideoConfig.SHOW_HOSPITAL
+                ? Arrays.asList(Facility.Type.POLICE, Facility.Type.FIRE_STATION)
+                : Arrays.asList(
+                        Facility.Type.POLICE, Facility.Type.FIRE_STATION, Facility.Type.HOSPITAL);
+        return StatusPlace.listFor(facilities(), types, latitude(), longitude());
     }
 
     /** Facilities that can help, responders first and soonest arrival first. */
     public List<Facility> supportFacilities(EmergencyType type) {
         List<Facility> result = new ArrayList<>(
-                facilities.nearestOfEach(EmergencyPlan.supportTypes(type), latitude(), longitude()));
+                facilities().nearestOfEach(EmergencyPlan.supportTypes(type), latitude(), longitude()));
         result.sort(Comparator.comparingLong(facility -> {
             Long arrival = ResponseEstimator.arrivalMillis(facility);
             return arrival == null ? Long.MAX_VALUE : arrival;
@@ -771,21 +810,45 @@ public final class MainViewModel extends AndroidViewModel {
      */
     public void requestDispatch(Facility facility) {
         ActiveEmergency active = emergency.getValue();
+        if (active == null) return;
+        MockEmergencyReporter.Report report = dispatch(active.type, facility);
+        if (report != null) lastReport.setValue(report);
+    }
+
+    /**
+     * TEST ONLY: records a report addressed to one facility and starts its arrival countdown
+     * from now. Nothing leaves the app.
+     *
+     * @return the record, or null if the place sends nobody or was asked already
+     */
+    @Nullable
+    private MockEmergencyReporter.Report dispatch(EmergencyType type, Facility facility) {
         Long arrival = ResponseEstimator.arrivalMillis(facility);
-        if (active == null || arrival == null) return;
+        if (arrival == null) return null;
         Map<String, Long> current = dispatches.getValue();
-        if (current != null && current.containsKey(facility.name)) return;
+        if (current != null && current.containsKey(facility.name)) return null;
         VehicleSnapshot reading = snapshot.getValue();
-        lastReport.setValue(reporter.submit(
-                active.type,
+        MockEmergencyReporter.Report report = reporter.submit(
+                type,
                 System.currentTimeMillis(),
                 reading == null ? null : reading.latitude,
                 reading == null ? null : reading.longitude,
                 reading == null ? null : reading.speedKph,
-                facility.name));
+                facility.name);
         Map<String, Long> updated = current == null ? new HashMap<>() : new HashMap<>(current);
         updated.put(facility.name, SystemClock.elapsedRealtime() + arrival);
         dispatches.setValue(updated);
+        return report;
+    }
+
+    /** Shows the evacuation and dispatch status again, after a report. */
+    public void openEvacuationStatus() {
+        if (reportFlow.isReported()) evacuationStatusShown.setValue(true);
+    }
+
+    /** Back to the guidance from the status screen. */
+    public void closeEvacuationStatus() {
+        evacuationStatusShown.setValue(false);
     }
 
     /** Facility name to expected arrival, on the SystemClock.elapsedRealtime() clock. */
@@ -938,8 +1001,8 @@ public final class MainViewModel extends AndroidViewModel {
         return reportVoiceStatus;
     }
 
-    public LiveData<Boolean> getEvacuationStatusRequest() {
-        return evacuationStatusRequest;
+    public LiveData<Boolean> getEvacuationStatusShown() {
+        return evacuationStatusShown;
     }
 
     public LiveData<MockEmergencyReporter.Report> getLastReport() {

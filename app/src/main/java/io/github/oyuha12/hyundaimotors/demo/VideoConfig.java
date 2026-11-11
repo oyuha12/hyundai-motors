@@ -1,6 +1,5 @@
 package io.github.oyuha12.hyundaimotors.demo;
 
-import androidx.annotation.Nullable;
 import io.github.oyuha12.hyundaimotors.facility.Facility;
 import io.github.oyuha12.hyundaimotors.telemetry.GeoPoint;
 import io.github.oyuha12.hyundaimotors.telemetry.SimulatedTelemetrySource.Scenario;
@@ -23,30 +22,55 @@ public final class VideoConfig {
      */
     public static final GeoPoint FALLBACK_POSITION = new GeoPoint(37.48544722, 127.03636666);
 
-    /**
-     * Place name (address) shown on the home screen instead of coordinates.
-     * TODO(영상): the address for the video. Until then the screen says the name is not set.
-     */
-    @Nullable public static final String LOCATION_NAME = null;
-
-    /** A real place shown in the video. */
-    public static final class Place {
-        public final Facility.Type type;
-        public final String name;
-        public final GeoPoint position;
-
-        public Place(Facility.Type type, String name, GeoPoint position) {
-            this.type = type;
-            this.name = name;
-            this.position = position;
-        }
-    }
+    // ---- Real places for the video -------------------------------------------------------------
+    //
+    // TODO(영상): fill in each name, latitude and longitude from the team. Never make them up.
+    // Leave a value null until it is known: screens then show "장소 미설정" (or "위치 이름 미설정")
+    // and leave the place out of distances, countdowns and the mini map. Once a place has a name
+    // and both coordinates it shows everywhere with no other change.
 
     /**
-     * TODO(영상): real places for the video (name, type, coordinates), from the team in step 5.
-     * Until then the existing sample facilities are shown.
+     * Filming location. The name shows on the home screen and the report receipt. The
+     * coordinates stand in until the location SDK reports a position, and are what 장정인 types
+     * into the emulator's Location setting.
      */
-    public static final List<Place> PLACES = Collections.emptyList();
+    public static final VideoPlace FILMING = new VideoPlace(
+            null,
+            null, // TODO(영상): 촬영 위치 이름
+            null, // TODO(영상): 위도
+            null); // TODO(영상): 경도
+
+    public static final VideoPlace EVACUATION = new VideoPlace(
+            Facility.Type.EVACUATION_SITE,
+            null, // TODO(영상): 대피 장소 이름
+            null, // TODO(영상): 위도
+            null); // TODO(영상): 경도
+
+    public static final VideoPlace POLICE = new VideoPlace(
+            Facility.Type.POLICE,
+            null, // TODO(영상): 경찰서 이름
+            null, // TODO(영상): 위도
+            null); // TODO(영상): 경도
+
+    public static final VideoPlace FIRE_STATION = new VideoPlace(
+            Facility.Type.FIRE_STATION,
+            null, // TODO(영상): 소방서 이름
+            null, // TODO(영상): 위도
+            null); // TODO(영상): 경도
+
+    /** Optional. Set SHOW_HOSPITAL to false to leave hospitals out of the video. */
+    public static final VideoPlace HOSPITAL = new VideoPlace(
+            Facility.Type.HOSPITAL,
+            null, // TODO(영상): 병원 이름
+            null, // TODO(영상): 위도
+            null); // TODO(영상): 경도
+
+    public static final boolean SHOW_HOSPITAL = true;
+
+    /** The places video mode uses in place of the sample facilities. */
+    public static final List<VideoPlace> PLACES = SHOW_HOSPITAL
+            ? Collections.unmodifiableList(Arrays.asList(EVACUATION, POLICE, FIRE_STATION, HOSPITAL))
+            : Collections.unmodifiableList(Arrays.asList(EVACUATION, POLICE, FIRE_STATION));
 
     /** Normal driving before the scenario begins, to line up with the dashcam footage. */
     public static final List<Integer> LEAD_IN_SECONDS =

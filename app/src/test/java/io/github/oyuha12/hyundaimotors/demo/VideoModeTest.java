@@ -2,12 +2,16 @@ package io.github.oyuha12.hyundaimotors.demo;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
+import io.github.oyuha12.hyundaimotors.facility.Facility;
 import io.github.oyuha12.hyundaimotors.telemetry.GeoPoint;
 import io.github.oyuha12.hyundaimotors.telemetry.SimulatedTelemetrySource.Scenario;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.Test;
 
 public class VideoModeTest {
@@ -36,7 +40,16 @@ public class VideoModeTest {
     public void simulationPosition_isTheSdkFixInVideoMode() {
         GeoPoint sdk = new GeoPoint(35.1, 129.0);
         assertSame(sdk, VideoMode.simulationPosition(true, sdk));
-        assertNull(VideoMode.simulationPosition(true, null));
+        // Before the first fix: the filming location, or none while it is not set.
+        assertSame(VideoConfig.FILMING.position(), VideoMode.simulationPosition(true, null));
+    }
+
+    @Test
+    public void fallbackPosition_isTheFilmingLocationOnceSet() {
+        GeoPoint filming = VideoConfig.FILMING.position();
+        assertSame(filming != null ? filming : VideoConfig.FALLBACK_POSITION,
+                VideoMode.fallbackPosition(true));
+        assertSame(VideoConfig.FALLBACK_POSITION, VideoMode.fallbackPosition(false));
     }
 
     /** Off, simulations keep the sample position they always used. */
@@ -84,9 +97,36 @@ public class VideoModeTest {
         assertEquals(VideoConfig.DEFAULT_LEAD_IN_SECONDS, VideoMode.leadInSeconds(-1));
     }
 
-    /** Places stay empty until the team gives real ones; nothing may be made up. */
+    /**
+     * Each real place is either still TODO (all null) or complete with valid coordinates, so a
+     * half-filled entry cannot slip into the video. Holds before and after the team fills them.
+     */
     @Test
-    public void places_areNotFilledInYet() {
-        assertTrue(VideoConfig.PLACES.isEmpty());
+    public void places_areUnsetOrComplete() {
+        List<VideoPlace> all = new ArrayList<>(VideoConfig.PLACES);
+        all.add(VideoConfig.FILMING);
+        for (VideoPlace place : all) {
+            String where = String.valueOf(place.type);
+            if (place.latitude != null || place.longitude != null) {
+                assertNotNull(where, place.latitude);
+                assertNotNull(where, place.longitude);
+                assertTrue(where, place.latitude >= -90 && place.latitude <= 90);
+                assertTrue(where, place.longitude >= -180 && place.longitude <= 180);
+            }
+            if (place != VideoConfig.FILMING) {
+                assertEquals(where, place.name != null, place.position() != null);
+            }
+        }
+    }
+
+    @Test
+    public void places_coverEvacuationPoliceAndFire() {
+        assertEquals(Facility.Type.EVACUATION_SITE, VideoConfig.EVACUATION.type);
+        assertEquals(Facility.Type.POLICE, VideoConfig.POLICE.type);
+        assertEquals(Facility.Type.FIRE_STATION, VideoConfig.FIRE_STATION.type);
+        assertTrue(VideoConfig.PLACES.contains(VideoConfig.EVACUATION));
+        assertTrue(VideoConfig.PLACES.contains(VideoConfig.POLICE));
+        assertTrue(VideoConfig.PLACES.contains(VideoConfig.FIRE_STATION));
+        assertEquals(VideoConfig.SHOW_HOSPITAL, VideoConfig.PLACES.contains(VideoConfig.HOSPITAL));
     }
 }

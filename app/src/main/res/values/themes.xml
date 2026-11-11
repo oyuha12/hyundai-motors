@@ -50,6 +50,21 @@
         <item name="android:textColor">@color/on_background</item>
     </style>
 
+    <!-- The current guidance step: the largest text on the situation screen after its title. -->
+    <style name="TextAppearance.App.StepText" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="fontFamily">@font/app_font</item>
+        <item name="android:fontFamily">@font/app_font</item>
+        <item name="android:textSize">40sp</item>
+        <item name="android:lineHeight">52sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/on_surface</item>
+    </style>
+
+    <!-- Gear letters on the step picture, such as N and P. -->
+    <style name="TextAppearance.App.StepSymbol" parent="TextAppearance.App.Headline">
+        <item name="android:textSize">72sp</item>
+    </style>
+
     <style name="TextAppearance.App.Body" parent="TextAppearance.Material3.BodyLarge">
         <item name="fontFamily">@font/app_font</item>
         <item name="android:fontFamily">@font/app_font</item>
@@ -171,6 +186,13 @@
 
     <!-- Emergency screen: main action in red, others in Pleos gray. -->
     <style name="Widget.App.Button.Emergency" parent="Widget.App.Button.Danger" />
+
+    <!-- Routes use the Pleos informative blue, like route lines. -->
+    <style name="Widget.App.Button.Route" parent="Widget.App.Button">
+        <item name="backgroundTint">@color/primary</item>
+        <item name="android:textColor">@color/on_primary</item>
+        <item name="iconTint">@color/on_primary</item>
+    </style>
 
     <style name="Widget.App.Button.EmergencyOutlined" parent="Widget.App.Button.Tonal" />
 

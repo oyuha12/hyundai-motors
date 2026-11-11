@@ -77,15 +77,16 @@ public class ReportFlowTest {
         assertEquals(Arrays.asList("prompt", "listen", "report STAGED_VOICE"), events);
     }
 
-    /** The button works at any time, once. The status waits for the guidance to end. */
+    /** The button works at any time, once. The status follows the announcement at once. */
     @Test
     public void button_duringTheGuidance() {
         assertTrue(flow.onButton());
         assertFalse(flow.onButton());
-        flow.onAnnounced();
         assertEquals(Arrays.asList("report BUTTON"), events);
+        flow.onAnnounced();
+        assertEquals(Arrays.asList("report BUTTON", "status"), events);
 
-        flow.onGuidanceFinished(); // No offer: already reported.
+        flow.onGuidanceFinished(); // No offer and no second status: already reported.
         assertEquals(Arrays.asList("report BUTTON", "status"), events);
     }
 

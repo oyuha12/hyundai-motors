@@ -100,6 +100,8 @@ final class EmergencyOverlay {
         receiptTestNotice = root.findViewById(R.id.receipt_test_notice);
 
         reportButton.setOnClickListener(v -> viewModel.onSosPressed());
+        root.findViewById(R.id.receipt_open_status)
+                .setOnClickListener(v -> viewModel.openEvacuationStatus());
         root.findViewById(R.id.emergency_repeat).setOnClickListener(v -> viewModel.repeatGuidance());
         root.findViewById(R.id.emergency_dismiss).setOnClickListener(v -> viewModel.dismissEmergency());
     }
@@ -122,6 +124,11 @@ final class EmergencyOverlay {
             evacuationName.setText(target.name);
             evacuationDetail.setText(Directions.describe(root.getContext(), target));
             evacuationRoute.setOnClickListener(v -> viewModel.navigateTo(target));
+        } else {
+            // Video mode before the real places are set (VideoConfig TODO).
+            evacuationName.setText(R.string.place_unset);
+            evacuationDetail.setText(R.string.value_none);
+            evacuationRoute.setOnClickListener(null);
         }
 
         FacilityUi.fillList(facilityList, viewModel.supportFacilities(active.type),
@@ -203,11 +210,6 @@ final class EmergencyOverlay {
         if (visible) reportVoiceStatus.setText(message);
     }
 
-    /**
-     * The report is done and the guidance read to the end. TODO(다음 단계): open the evacuation
-     * and dispatch status screen here. Until then the situation screen stays as it is.
-     */
-    void showEvacuationStatus() {}
 
     /** Motion runs only while parked and while the screen is visible. */
     void setMotionAllowed(boolean allowed) {

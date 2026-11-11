@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SOS report, what was heard, the report receipt, and the screen's other actions. -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <!-- One touch reports at once, without a confirmation popup. -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/emergency_report"
+        style="@style/Widget.App.Button.Emergency"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/gap"
+        android:minHeight="@dimen/sos_button_height"
+        android:text="@string/emergency_report"
+        android:textAppearance="@style/TextAppearance.App.SituationLabel"
+        app:icon="@drawable/ic_sos"
+        app:iconGravity="textStart"
+        app:iconSize="@dimen/icon_size_large" />
+
+    <!-- Listening for "신고해 줘" after the last step. -->
+    <TextView
+        android:id="@+id/report_voice_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/gap_small"
+        android:gravity="center_horizontal"
+        android:textAppearance="@style/TextAppearance.App.Label"
+        android:textColor="@color/on_surface_variant"
+        android:visibility="gone" />
+
+    <!-- What was recognized, like a speech bubble. -->
+    <TextView
+        android:id="@+id/report_heard"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="@dimen/gap"
+        android:background="@drawable/bg_chip"
+        android:backgroundTint="@color/surface_variant"
+        android:paddingHorizontal="@dimen/gap_large"
+        android:paddingVertical="@dimen/gap"
+        android:textAppearance="@style/TextAppearance.App.BodyStrong"
+        android:textColor="@color/on_surface"
+        android:visibility="gone"
+        app:drawableStartCompat="@drawable/ic_volume_up"
+        android:drawablePadding="@dimen/gap_small"
+        app:drawableTint="@color/on_surface_variant" />
+
+    <include layout="@layout/view_report_receipt" />
+
+    <!-- Mock dispatch requests to one facility. -->
+    <TextView
+        android:id="@+id/emergency_report_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/gap"
+        android:background="@drawable/bg_chip"
+        android:backgroundTint="@color/success_container"
+        android:padding="@dimen/gap"
+        android:textAppearance="@style/TextAppearance.App.Body"
+        android:textColor="@color/on_surface"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/gap"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/emergency_repeat"
+            style="@style/Widget.App.Button.EmergencyOutlined"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/emergency_repeat"
+            app:icon="@drawable/ic_volume_up" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/emergency_dismiss"
+            style="@style/Widget.App.Button.EmergencyOutlined"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/gap"
+            android:layout_weight="1"
+            android:text="@string/emergency_dismiss"
+            app:icon="@drawable/ic_close" />
+    </LinearLayout>
+</LinearLayout>

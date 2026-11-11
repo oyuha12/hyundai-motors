@@ -40,6 +40,14 @@ final class FacilityUi {
             boolean videoMode) {
         list.removeAllViews();
         LayoutInflater inflater = LayoutInflater.from(list.getContext());
+        if (!facilities.iterator().hasNext()) {
+            // Video mode before the real places are set (VideoConfig TODO).
+            TextView unset = new TextView(list.getContext());
+            unset.setTextAppearance(R.style.TextAppearance_App_BodySecondary);
+            unset.setText(R.string.place_unset);
+            list.addView(unset);
+            return;
+        }
         for (Facility facility : facilities) {
             View row = inflater.inflate(R.layout.item_facility, list, false);
             row.setTag(facility);
@@ -64,10 +72,10 @@ final class FacilityUi {
      * @param videoMode natural wording instead of test wording
      */
     static void updateArrivals(ViewGroup list, Map<String, Long> dispatched, boolean videoMode) {
-        Context context = list.getContext();
         long now = SystemClock.elapsedRealtime();
         for (int i = 0; i < list.getChildCount(); i++) {
             View row = list.getChildAt(i);
+            if (!(row.getTag() instanceof Facility)) continue;
             Facility facility = (Facility) row.getTag();
             Integer minutes = ResponseEstimator.arrivalMinutes(facility);
             View box = row.findViewById(R.id.facility_eta_box);
@@ -78,21 +86,35 @@ final class FacilityUi {
             TextView eta = row.findViewById(R.id.facility_eta);
             MaterialButton dispatchButton = row.findViewById(R.id.facility_dispatch);
             Long arrivalAt = dispatched.get(facility.name);
-            if (arrivalAt == null) {
-                caption.setText(R.string.eta_caption_estimate);
-                eta.setText(context.getString(R.string.eta_minutes, minutes));
-                dispatchButton.setEnabled(true);
-                dispatchButton.setText(VideoWording.pick(R.string.dispatch_request, videoMode));
-            } else {
-                long left = Math.max(0, arrivalAt - now);
-                caption.setText(left == 0 ? R.string.eta_caption_arrived : R.string.eta_caption_countdown);
-                eta.setText(left == 0
-                        ? context.getString(R.string.eta_arrived)
-                        : context.getString(R.string.eta_countdown, left / 60_000, (left / 1000) % 60));
-                dispatchButton.setEnabled(false);
-                dispatchButton.setText(VideoWording.pick(R.string.dispatch_requested, videoMode));
-            }
+            showArrival(caption, eta, facility, arrivalAt, now);
+            dispatchButton.setEnabled(arrivalAt == null);
+            dispatchButton.setText(VideoWording.pick(arrivalAt == null
+                    ? R.string.dispatch_request
+                    : R.string.dispatch_requested, videoMode));
         }
+    }
+
+    /**
+     * One arrival: the estimate before a request, then a countdown that drops every second.
+     *
+     * @param arrivalAt expected arrival on the elapsedRealtime clock, or null before a request
+     */
+    static void showArrival(
+            TextView caption, TextView eta, Facility facility, @Nullable Long arrivalAt, long now) {
+        Context context = caption.getContext();
+        if (arrivalAt == null) {
+            Integer minutes = ResponseEstimator.arrivalMinutes(facility);
+            caption.setText(R.string.eta_caption_estimate);
+            eta.setText(minutes == null
+                    ? context.getString(R.string.value_none)
+                    : context.getString(R.string.eta_minutes, minutes));
+            return;
+        }
+        long left = Math.max(0, arrivalAt - now);
+        caption.setText(left == 0 ? R.string.eta_caption_arrived : R.string.eta_caption_countdown);
+        eta.setText(left == 0
+                ? context.getString(R.string.eta_arrived)
+                : context.getString(R.string.eta_countdown, left / 60_000, (left / 1000) % 60));
     }
 
     /** Example: "병원 · 1.8km · 북서쪽". */

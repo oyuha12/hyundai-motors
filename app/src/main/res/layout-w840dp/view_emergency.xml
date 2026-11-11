@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Wide window: guidance on the left, evacuation route and nearby help on the right. -->
+<!--
+    Wide window: the step large on the left, filling the height; the SOS button, other actions,
+    evacuation route and nearby help on the right.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/emergency_overlay"
     android:layout_width="match_parent"
@@ -13,12 +16,14 @@
     android:padding="@dimen/screen_padding"
     android:visibility="gone">
 
+    <!-- Stretches the step card to the window height; scrolls only if the text is very long. -->
     <ScrollView
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:fillViewport="true">
 
-        <include layout="@layout/view_emergency_guidance" />
+        <include layout="@layout/view_emergency_step" />
     </ScrollView>
 
     <ScrollView
@@ -27,6 +32,18 @@
         android:layout_marginStart="@dimen/section_gap"
         android:layout_weight="1">
 
-        <include layout="@layout/view_emergency_support" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <include layout="@layout/view_emergency_actions" />
+
+            <include
+                layout="@layout/view_emergency_support"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/section_gap" />
+        </LinearLayout>
     </ScrollView>
 </LinearLayout>

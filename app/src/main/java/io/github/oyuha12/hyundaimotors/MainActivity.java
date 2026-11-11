@@ -76,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView nearbyNotice;
     private TextView routeStatus;
     private ConfirmOverlay confirmOverlay;
+    private EvacuationStatusOverlay statusOverlay;
     private RouteDemoOverlay routeDemo;
     private View drowsyBanner;
     private TextView drowsyText;
@@ -102,6 +103,12 @@ public class MainActivity extends AppCompatActivity {
                 .inflate(R.layout.view_emergency, (ViewGroup) findViewById(android.R.id.content), false);
         addContentView(overlayView, overlayView.getLayoutParams());
         overlay = new EmergencyOverlay(overlayView, viewModel);
+
+        // Above the situation screen, below the confirmation and the demo route.
+        View statusView = LayoutInflater.from(this).inflate(
+                R.layout.view_evacuation_status, (ViewGroup) findViewById(android.R.id.content), false);
+        addContentView(statusView, statusView.getLayoutParams());
+        statusOverlay = new EvacuationStatusOverlay(statusView, viewModel);
 
         View confirmView = LayoutInflater.from(this)
                 .inflate(R.layout.view_confirm, (ViewGroup) findViewById(android.R.id.content), false);
@@ -214,6 +221,7 @@ public class MainActivity extends AppCompatActivity {
         setDetail(detailReportsLabel, getString(VideoWording.pick(R.string.detail_reports_label, on)));
         overlay.setVideoMode(on);
         confirmOverlay.setVideoMode(on);
+        statusOverlay.setVideoMode(on);
         routeDemo.setVideoMode(on);
         renderFacilities();
         VehicleSnapshot latest = viewModel.getSnapshot().getValue();
@@ -295,9 +303,10 @@ public class MainActivity extends AppCompatActivity {
         viewModel.getReportReceipt().observe(this, overlay::showReceipt);
         viewModel.getHeardReport().observe(this, overlay::showHeard);
         viewModel.getReportVoiceStatus().observe(this, overlay::showReportVoiceStatus);
-        viewModel.getEvacuationStatusRequest().observe(this, open -> {
-            if (Boolean.TRUE.equals(open)) overlay.showEvacuationStatus();
-        });
+        viewModel.getEvacuationStatusShown().observe(this, shown -> renderEvacuationStatus());
+        viewModel.getReportReceipt().observe(this, statusOverlay::showReceipt);
+        viewModel.getStepIndex().observe(this, statusOverlay::showStep);
+        viewModel.getDispatches().observe(this, statusOverlay::showDispatches);
         setDetail(detailReports, getString(R.string.mock_report_count, viewModel.getMockReportCount()));
         viewModel.getLastReport().observe(this, report -> {
             overlay.showReport(report);
@@ -359,12 +368,21 @@ public class MainActivity extends AppCompatActivity {
                 facilityList, viewModel.nearbyFacilities(), viewModel::navigateTo, null, video);
     }
 
+    /** The status screen shows after a report, while the situation lasts. */
+    private void renderEvacuationStatus() {
+        MainViewModel.ActiveEmergency active = viewModel.getEmergency().getValue();
+        boolean shown = Boolean.TRUE.equals(viewModel.getEvacuationStatusShown().getValue())
+                && active != null && active.confirmed;
+        statusOverlay.show(shown ? active.type : null);
+    }
+
     private void renderEmergency(MainViewModel.ActiveEmergency active) {
         // Unconfirmed: ask first. Confirmed: the situation screen.
         confirmOverlay.show(active);
         MainViewModel.ActiveEmergency confirmed = active != null && active.confirmed ? active : null;
         overlay.showEmergency(confirmed);
         if (confirmed != null) overlay.showStep(viewModel.getStepIndex().getValue());
+        renderEvacuationStatus();
         boolean normal = active == null;
         coreValue.setText(normal ? R.string.status_normal : R.string.status_alert);
         coreValue.setTextColor(ContextCompat.getColor(
