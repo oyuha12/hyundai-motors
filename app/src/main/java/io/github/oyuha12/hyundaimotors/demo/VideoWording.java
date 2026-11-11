@@ -19,7 +19,7 @@ public final class VideoWording {
 
     static {
         REPLACEMENTS.put(R.string.emergency_report, R.string.video_screen_emergency_report);
-        REPLACEMENTS.put(R.string.mock_report_done, R.string.video_screen_report_done);
+        REPLACEMENTS.put(R.string.report_announcement, R.string.video_screen_report_announcement);
         REPLACEMENTS.put(R.string.dispatch_request, R.string.video_screen_dispatch_request);
         REPLACEMENTS.put(R.string.dispatch_requested, R.string.video_screen_dispatch_requested);
         REPLACEMENTS.put(R.string.mock_dispatch_done, R.string.video_screen_dispatch_done);

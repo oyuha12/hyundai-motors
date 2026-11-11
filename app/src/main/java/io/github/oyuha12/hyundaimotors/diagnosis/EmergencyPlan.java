@@ -95,15 +95,6 @@ public final class EmergencyPlan {
         }
     }
 
-    /**
-     * The situation's name in "○○이(가) 의심됩니다". The voice script calls a fire "차량 화재";
-     * other situations use their title.
-     */
-    @StringRes
-    public static int suspectedName(EmergencyType type) {
-        return type == EmergencyType.FIRE ? R.string.suspected_name_fire : title(type);
-    }
-
     /** Where people should go. */
     public static Type evacuationTarget(EmergencyType type) {
         switch (type) {

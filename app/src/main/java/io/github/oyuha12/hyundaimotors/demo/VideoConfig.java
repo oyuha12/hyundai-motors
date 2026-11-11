@@ -57,6 +57,12 @@ public final class VideoConfig {
     /** A detection goes straight to the guidance, without "네/아니요", unless the menu says no. */
     public static final boolean DEFAULT_SKIP_CONFIRMATION = true;
 
+    /**
+     * Stand-in for a spoken "신고해 줘" when the emulator microphone does not work: a double tap
+     * while a report is awaited. Off unless turned on in the menu.
+     */
+    public static final boolean DEFAULT_STAGED_VOICE_REPORT = false;
+
     /** Above this speed the car shows as driving in video mode. */
     public static final float DRIVING_SPEED_KPH = 1f;
 

@@ -37,6 +37,8 @@ import io.github.oyuha12.hyundaimotors.guidance.KoreanParticle;
 import io.github.oyuha12.hyundaimotors.guidance.VoiceAnswerListener;
 import io.github.oyuha12.hyundaimotors.report.EventRecorder;
 import io.github.oyuha12.hyundaimotors.report.MockEmergencyReporter;
+import io.github.oyuha12.hyundaimotors.report.ReportFlow;
+import io.github.oyuha12.hyundaimotors.report.ReportReceipt;
 import io.github.oyuha12.hyundaimotors.telemetry.GeoPoint;
 import io.github.oyuha12.hyundaimotors.telemetry.PleosTelemetrySource;
 import io.github.oyuha12.hyundaimotors.telemetry.SimulatedTelemetrySource;
@@ -51,6 +53,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -64,6 +67,9 @@ import java.util.concurrent.Executors;
  *
  * <p>Guidance steps follow one another as they are read, but a step that waits for the car to
  * stop holds the next one until the speed is below 1 km/h ({@link GuidanceSequencer}).
+ *
+ * <p>Reporting takes one touch of the SOS button, or one phrase after the last step offers it
+ * ({@link ReportFlow}). Reports are recorded in MockEmergencyReporter and reach no one.
  */
 public final class MainViewModel extends AndroidViewModel {
     /** An emergency in progress: what it is, why it was raised, and whether it is confirmed. */
@@ -99,6 +105,12 @@ public final class MainViewModel extends AndroidViewModel {
     static final int NO_ANSWER_SECONDS = 15;
     /** A detected condition must stay normal this long before the screen closes. */
     private static final long NORMAL_HOLD_MILLIS = 5_000L;
+    /** Starts listening even if the report offer's "speech finished" event never arrives. */
+    private static final long REPORT_PROMPT_MAX_MILLIS = 10_000L;
+    /** Carries on even if the report announcement's "speech finished" event never arrives. */
+    private static final long REPORT_ANNOUNCE_MAX_MILLIS = 15_000L;
+    /** How long a recognized request shows before the report is made. */
+    private static final long HEARD_BUBBLE_MILLIS = 1_500L;
 
     private final FakeDrivingStateSource drivingState = new FakeDrivingStateSource();
     private final EmergencyDetector detector = new EmergencyDetector();
@@ -112,6 +124,7 @@ public final class MainViewModel extends AndroidViewModel {
     private final VoiceAnswerListener voice;
     private final RouteNavigator navigator;
     private final GuidanceSequencer sequencer;
+    private final ReportFlow reportFlow;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     private final MutableLiveData<VehicleSnapshot> snapshot = new MutableLiveData<>();
@@ -129,6 +142,14 @@ public final class MainViewModel extends AndroidViewModel {
     private final MutableLiveData<Facility> demoRouteRequest = new MutableLiveData<>();
     /** After a step that waits for the car to stop, until it has. */
     private final MutableLiveData<Boolean> waitingForStop = new MutableLiveData<>(false);
+    /** The receipt of this situation's report, or null. */
+    private final MutableLiveData<ReportReceipt> reportReceipt = new MutableLiveData<>();
+    /** A recognized report request, shown like a speech bubble, or null. */
+    private final MutableLiveData<String> heardReport = new MutableLiveData<>();
+    /** Listening for a spoken report, as a string resource, or 0. */
+    private final MutableLiveData<Integer> reportVoiceStatus = new MutableLiveData<>(0);
+    /** True once the report is done: where the evacuation and dispatch status screen opens. */
+    private final MutableLiveData<Boolean> evacuationStatusRequest = new MutableLiveData<>(false);
     private final MutableLiveData<Boolean> videoMode = new MutableLiveData<>(false);
     /** Shown driving state: the manual toggle, or in video mode the (simulated) speed. */
     private final MediatorLiveData<Boolean> driving = new MediatorLiveData<>();
@@ -141,6 +162,9 @@ public final class MainViewModel extends AndroidViewModel {
     @Nullable private EmergencyType dismissed;
     private final Runnable stepTimeout = this::advanceStep;
     private final Runnable countdownTick = this::tickCountdown;
+    private final Runnable reportPromptTimeout = this::onReportPromptSpoken;
+    private final Runnable reportAnnounceTimeout = this::onReportAnnounced;
+    private final Runnable announcedReport = this::fileAnnouncedReport;
     /** Read just before the first step, then cleared. */
     @Nullable private String guidanceLead;
     private int questionsAsked;
@@ -169,6 +193,35 @@ public final class MainViewModel extends AndroidViewModel {
             @Override
             public void onWaitingForStop(boolean waiting) {
                 waitingForStop.setValue(waiting);
+            }
+
+            @Override
+            public void onFinished() {
+                reportFlow.onGuidanceFinished();
+            }
+        });
+        reportFlow = new ReportFlow(new ReportFlow.Listener() {
+            @Override
+            public void onPrompt() {
+                // Listening starts only once this has been read.
+                speaker.speak(getApplication().getString(R.string.report_prompt),
+                        MainViewModel.this::onReportPromptSpoken);
+                handler.postDelayed(reportPromptTimeout, REPORT_PROMPT_MAX_MILLIS);
+            }
+
+            @Override
+            public void onListen() {
+                listenForReport();
+            }
+
+            @Override
+            public void onReport(ReportFlow.Trigger trigger, @Nullable String heard) {
+                beginReport(trigger, heard);
+            }
+
+            @Override
+            public void onReportFinished() {
+                evacuationStatusRequest.setValue(true);
             }
         });
         videoMode.setValue(demoPrefs().getBoolean(KEY_VIDEO_MODE, false));
@@ -265,12 +318,20 @@ public final class MainViewModel extends AndroidViewModel {
         navigator.clearStatus();
         drowsinessAlert.setValue(0);
         normalSince = -1L;
+        clearReport();
+    }
+
+    private void clearReport() {
+        reportFlow.reset();
+        reportReceipt.setValue(null);
+        heardReport.setValue(null);
+        reportVoiceStatus.setValue(0);
+        evacuationStatusRequest.setValue(false);
     }
 
     /** "급발진이", "차량 화재가": the name in "○○이(가) 의심됩니다". */
     private String suspectedSubject(EmergencyType type) {
-        return KoreanParticle.subject(
-                getApplication().getString(EmergencyPlan.suspectedName(type)));
+        return KoreanParticle.subject(getApplication().getString(EmergencyPlan.title(type)));
     }
 
     private void ask(String question) {
@@ -353,7 +414,11 @@ public final class MainViewModel extends AndroidViewModel {
      */
     private void startGuidance(ActiveEmergency confirmed, @Nullable String lead) {
         emergency.setValue(confirmed);
-        if (EmergencyPlan.reportsOnConfirm(confirmed.type)) submitMockReport();
+        if (EmergencyPlan.reportsOnConfirm(confirmed.type)) {
+            // Read out by the steps instead, so nothing is announced here.
+            fileReport(false);
+            reportFlow.markReported();
+        }
         guidanceLead = lead;
         sequencer.start(EmergencyPlan.steps(confirmed.type));
     }
@@ -391,6 +456,10 @@ public final class MainViewModel extends AndroidViewModel {
         ActiveEmergency current = emergency.getValue();
         if (current == null || !current.confirmed) return;
         speaker.stop();
+        voice.stop();
+        handler.removeCallbacks(reportPromptTimeout);
+        reportVoiceStatus.setValue(0);
+        reportFlow.onGuidanceRestarted();
         sequencer.start(EmergencyPlan.steps(current.type));
     }
 
@@ -416,6 +485,7 @@ public final class MainViewModel extends AndroidViewModel {
         stopAllSpeech();
         dismissed = current != null && current.detected ? current.type : null;
         sequencer.stop();
+        clearReport();
         emergency.setValue(null);
         lastReport.setValue(null);
         dispatches.setValue(Collections.emptyMap());
@@ -502,17 +572,101 @@ public final class MainViewModel extends AndroidViewModel {
 
     // ---- Mock report and demos ----------------------------------------------------------------
 
-    /** TEST ONLY: records a report in memory. Nothing leaves the app. */
-    public void submitMockReport() {
+    /** The SOS button: reports at once, without a confirmation popup. Nothing leaves the app. */
+    public void onSosPressed() {
+        ActiveEmergency current = emergency.getValue();
+        if (current == null || !current.confirmed) return;
+        reportFlow.onButton();
+    }
+
+    /**
+     * Video mode stand-in for saying "신고해 줘" when the emulator microphone does not work: a
+     * double tap while a report is awaited, with the menu option on.
+     */
+    public void onStagedVoiceGesture() {
+        if (!VideoMode.allowsStagedVoiceReport(isVideoMode(), isVideoStagedVoiceReport())) return;
+        reportFlow.onStagedVoice();
+    }
+
+    private void onReportPromptSpoken() {
+        handler.removeCallbacks(reportPromptTimeout);
+        reportFlow.onPromptSpoken();
+    }
+
+    private void listenForReport() {
+        reportVoiceStatus.setValue(R.string.report_voice_listening);
+        voice.listen(new VoiceAnswerListener.Callback() {
+            @Override
+            public void onHeard(String text) {
+                if (!reportFlow.isAwaiting()) return;
+                if (!reportFlow.onHeard(text)) {
+                    reportVoiceStatus.setValue(R.string.report_voice_not_understood);
+                }
+            }
+
+            @Override
+            public void onUnavailable() {
+                if (reportFlow.isAwaiting()) reportVoiceStatus.setValue(R.string.voice_unavailable);
+            }
+        });
+    }
+
+    /**
+     * A report was asked for. The guidance holds so the announcement is heard in full. A spoken
+     * request shows what was heard for a moment first.
+     */
+    private void beginReport(ReportFlow.Trigger trigger, @Nullable String heard) {
+        handler.removeCallbacks(reportPromptTimeout);
+        handler.removeCallbacks(stepTimeout);
+        voice.stop();
+        reportVoiceStatus.setValue(0);
+        sequencer.pause();
+        if (trigger == ReportFlow.Trigger.BUTTON) {
+            fileReport(true);
+            return;
+        }
+        heardReport.setValue(heard != null
+                ? heard
+                : getApplication().getString(R.string.report_staged_phrase));
+        handler.postDelayed(announcedReport, HEARD_BUBBLE_MILLIS);
+    }
+
+    private void fileAnnouncedReport() {
+        fileReport(true);
+    }
+
+    /**
+     * TEST ONLY: records the report in memory and shows its receipt. Nothing leaves the app.
+     *
+     * @param announce also read "119와 112에 신고를 접수했습니다…" aloud
+     */
+    private void fileReport(boolean announce) {
         ActiveEmergency active = emergency.getValue();
         if (active == null) return;
+        long now = System.currentTimeMillis();
         VehicleSnapshot reading = snapshot.getValue();
+        Float speed = reading == null ? null : reading.speedKph;
         lastReport.setValue(reporter.submit(
                 active.type,
-                System.currentTimeMillis(),
+                now,
                 reading == null ? null : reading.latitude,
                 reading == null ? null : reading.longitude,
-                reading == null ? null : reading.speedKph));
+                speed));
+        reportReceipt.setValue(new ReportReceipt(
+                active.type, now, locationLabel(reading), eventRecorder.maxSpeedKph(), speed));
+        if (!announce) return;
+        speaker.speak(
+                getApplication().getString(
+                        VideoWording.pick(R.string.report_announcement, isVideoMode())),
+                this::onReportAnnounced);
+        handler.postDelayed(reportAnnounceTimeout, REPORT_ANNOUNCE_MAX_MILLIS);
+    }
+
+    /** The announcement was read: the guidance carries on where it stopped. */
+    private void onReportAnnounced() {
+        handler.removeCallbacks(reportAnnounceTimeout);
+        reportFlow.onAnnounced();
+        sequencer.resume();
     }
 
     public void startScenario(SimulatedTelemetrySource.Scenario scenario) {
@@ -576,6 +730,19 @@ public final class MainViewModel extends AndroidViewModel {
         return hasRealLocation()
                 ? snapshot.getValue().longitude
                 : VideoConfig.FALLBACK_POSITION.longitude;
+    }
+
+    /** Where the car is, as the home screen shows it: a place name in video mode. */
+    public String locationLabel(@Nullable VehicleSnapshot reading) {
+        if (isVideoMode()) {
+            return VideoConfig.LOCATION_NAME != null
+                    ? VideoConfig.LOCATION_NAME
+                    : getApplication().getString(R.string.video_screen_location_unset);
+        }
+        if (usesDemoLocation()) return getApplication().getString(R.string.demo_location_label);
+        return reading != null && reading.hasLocation()
+                ? String.format(Locale.US, "%.4f, %.4f", reading.latitude, reading.longitude)
+                : getApplication().getString(R.string.value_unknown);
     }
 
     public List<Facility> nearbyFacilities() {
@@ -682,6 +849,7 @@ public final class MainViewModel extends AndroidViewModel {
     private static final String KEY_VIDEO_MODE = "video_mode";
     private static final String KEY_VIDEO_LEAD_IN = "video_lead_in_seconds";
     private static final String KEY_VIDEO_SKIP_CONFIRMATION = "video_skip_confirmation";
+    private static final String KEY_VIDEO_STAGED_VOICE = "video_staged_voice_report";
 
     public LiveData<Boolean> getVideoMode() {
         return videoMode;
@@ -719,6 +887,16 @@ public final class MainViewModel extends AndroidViewModel {
         demoPrefs().edit().putBoolean(KEY_VIDEO_SKIP_CONFIRMATION, skip).apply();
     }
 
+    /** Video mode: a double tap stands in for saying "신고해 줘". Off by default. */
+    public boolean isVideoStagedVoiceReport() {
+        return demoPrefs().getBoolean(
+                KEY_VIDEO_STAGED_VOICE, VideoConfig.DEFAULT_STAGED_VOICE_REPORT);
+    }
+
+    public void setVideoStagedVoiceReport(boolean on) {
+        demoPrefs().edit().putBoolean(KEY_VIDEO_STAGED_VOICE, on).apply();
+    }
+
     private void refreshDriving() {
         boolean value = isVideoMode()
                 ? drivingBySpeed
@@ -746,6 +924,22 @@ public final class MainViewModel extends AndroidViewModel {
 
     public LiveData<Boolean> getWaitingForStop() {
         return waitingForStop;
+    }
+
+    public LiveData<ReportReceipt> getReportReceipt() {
+        return reportReceipt;
+    }
+
+    public LiveData<String> getHeardReport() {
+        return heardReport;
+    }
+
+    public LiveData<Integer> getReportVoiceStatus() {
+        return reportVoiceStatus;
+    }
+
+    public LiveData<Boolean> getEvacuationStatusRequest() {
+        return evacuationStatusRequest;
     }
 
     public LiveData<MockEmergencyReporter.Report> getLastReport() {

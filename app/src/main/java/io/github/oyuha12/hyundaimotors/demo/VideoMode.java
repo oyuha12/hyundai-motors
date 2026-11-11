@@ -37,6 +37,11 @@ public final class VideoMode {
         return videoMode && detected && skipSetting;
     }
 
+    /** The double-tap stand-in for a spoken report works only in video mode with the option on. */
+    public static boolean allowsStagedVoiceReport(boolean videoMode, boolean stagedSetting) {
+        return videoMode && stagedSetting;
+    }
+
     /** A stored lead-in, or the default when it is not one of the menu's choices. */
     public static int leadInSeconds(int stored) {
         return VideoConfig.LEAD_IN_SECONDS.contains(stored)

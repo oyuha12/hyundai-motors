@@ -57,6 +57,14 @@ public class VideoModeTest {
     }
 
     @Test
+    public void stagedVoiceReport_onlyInVideoModeWithTheOptionOn() {
+        assertTrue(VideoMode.allowsStagedVoiceReport(true, true));
+        assertFalse(VideoMode.allowsStagedVoiceReport(true, false));
+        assertFalse(VideoMode.allowsStagedVoiceReport(false, true));
+        assertFalse(VideoConfig.DEFAULT_STAGED_VOICE_REPORT);
+    }
+
+    @Test
     public void menuScenarios_areTheVideoOnes() {
         assertEquals(Scenario.VIDEO_ACCELERATION, VideoConfig.SCENARIO_ACCELERATION);
         assertEquals(Scenario.VIDEO_FIRE, VideoConfig.SCENARIO_FIRE);

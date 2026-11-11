@@ -24,6 +24,11 @@ public class GuidanceSequencerTest {
         public void onWaitingForStop(boolean waiting) {
             events.add(waiting ? "wait" : "stopped");
         }
+
+        @Override
+        public void onFinished() {
+            events.add("finished");
+        }
     });
 
     private void readSteps(int count) {
@@ -35,8 +40,10 @@ public class GuidanceSequencerTest {
         sequencer.onSpeed(80f);
         sequencer.start(EmergencyPlan.steps(EmergencyType.ACCIDENT));
         readSteps(10);
-        assertEquals(Arrays.asList("step 1", "step 2", "step 3", "step 4", "step 5"), events);
+        assertEquals(Arrays.asList("step 1", "step 2", "step 3", "step 4", "step 5", "finished"),
+                events);
         assertEquals(4, sequencer.index());
+        assertTrue(sequencer.isFinished());
     }
 
     @Test
@@ -65,9 +72,11 @@ public class GuidanceSequencerTest {
         readSteps(1);
         assertEquals(Arrays.asList("step 1", "wait"), events);
         sequencer.onSpeed(0f);
-        readSteps(3);
+        readSteps(2);
         assertEquals(Arrays.asList("step 1", "wait", "stopped", "step 2", "step 3", "step 4"),
                 events);
+        readSteps(1);
+        assertEquals("finished", events.get(events.size() - 1));
     }
 
     @Test
@@ -93,7 +102,7 @@ public class GuidanceSequencerTest {
         readSteps(3);
         sequencer.onSpeed(80f);
         readSteps(2);
-        assertEquals(Arrays.asList("step 1", "step 2", "step 3", "step 4"), events);
+        assertEquals(Arrays.asList("step 1", "step 2", "step 3", "step 4", "finished"), events);
         assertFalse(sequencer.isWaiting());
     }
 
@@ -117,6 +126,52 @@ public class GuidanceSequencerTest {
         readSteps(3);
         assertEquals(Arrays.asList("step 1", "wait", "stopped"), events);
         assertEquals(-1, sequencer.index());
+    }
+
+    /** Paused for a report announcement: the interrupted step is read again afterwards. */
+    @Test
+    public void pause_holdsTheStepAndReadsItAgain() {
+        sequencer.onSpeed(0f);
+        sequencer.start(EmergencyPlan.steps(EmergencyType.ACCIDENT));
+        sequencer.pause();
+        readSteps(3);
+        assertEquals(Arrays.asList("step 1"), events);
+        sequencer.resume();
+        assertEquals(Arrays.asList("step 1", "step 1"), events);
+        readSteps(1);
+        assertEquals(Arrays.asList("step 1", "step 1", "step 2"), events);
+    }
+
+    /** A stop during the pause starts the next step only once the pause ends. */
+    @Test
+    public void pause_whileWaiting_advancesOnResume() {
+        sequencer.onSpeed(60f);
+        sequencer.start(EmergencyPlan.steps(EmergencyType.FIRE));
+        readSteps(1);
+        sequencer.pause();
+        sequencer.onSpeed(0f);
+        assertEquals(Arrays.asList("step 1", "wait"), events);
+        sequencer.resume();
+        assertEquals(Arrays.asList("step 1", "wait", "stopped", "step 2"), events);
+    }
+
+    @Test
+    public void pause_afterTheLastStep_changesNothing() {
+        sequencer.onSpeed(0f);
+        sequencer.start(EmergencyPlan.steps(EmergencyType.FIRE));
+        readSteps(4);
+        sequencer.pause();
+        sequencer.resume();
+        sequencer.onStepSpoken();
+        assertEquals(
+                Arrays.asList("step 1", "step 2", "step 3", "step 4", "finished"), events);
+    }
+
+    @Test
+    public void resume_withoutPause_changesNothing() {
+        sequencer.start(EmergencyPlan.steps(EmergencyType.FIRE));
+        sequencer.resume();
+        assertEquals(Arrays.asList("step 1"), events);
     }
 
     @Test

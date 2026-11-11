@@ -30,9 +30,9 @@ public class VideoFlowTest {
     private static final long[] SPEECH_MILLIS = {1_000L, 2_000L, 4_000L, 8_000L};
 
     private static final List<String> ACCELERATION_FLOW = Arrays.asList(
-            "detected", "step 1", "step 2", "step 3", "wait", "stopped", "step 4");
+            "detected", "step 1", "step 2", "step 3", "wait", "stopped", "step 4", "finished");
     private static final List<String> FIRE_FLOW = Arrays.asList(
-            "detected", "step 1", "wait", "stopped", "step 2", "step 3", "step 4");
+            "detected", "step 1", "wait", "stopped", "step 2", "step 3", "step 4", "finished");
 
     /** What happened in one run. Times are scenario milliseconds. */
     private static final class Run {
@@ -77,6 +77,11 @@ public class VideoFlowTest {
             @Override
             public void onWaitingForStop(boolean waiting) {
                 run.events.add(waiting ? "wait" : "stopped");
+            }
+
+            @Override
+            public void onFinished() {
+                run.events.add("finished");
             }
         });
 
@@ -199,7 +204,8 @@ public class VideoFlowTest {
     public void collision_readsStraightThrough() {
         Run run = play(VideoConfig.SCENARIO_THIRD, 3_000L, 2_000L);
         assertEquals(EmergencyType.ACCIDENT, run.detected);
-        assertEquals(Arrays.asList("detected", "step 1", "step 2", "step 3", "step 4", "step 5"),
+        assertEquals(Arrays.asList(
+                "detected", "step 1", "step 2", "step 3", "step 4", "step 5", "finished"),
                 run.events);
         assertEquals(SimulatedTelemetrySource.NOT_STOPPING, run.stopRequestedAt);
     }

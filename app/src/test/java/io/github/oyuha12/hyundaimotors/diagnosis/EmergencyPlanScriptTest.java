@@ -96,15 +96,21 @@ public class EmergencyPlanScriptTest {
         }
     }
 
+    /** The screen title and the spoken name are the script's "차량 화재". */
+    @Test
+    public void fire_isCalledVehicleFire() throws Exception {
+        assertEquals("차량 화재", text(EmergencyPlan.title(EmergencyType.FIRE)));
+    }
+
     @Test
     public void suspected_readsNaturally() throws Exception {
         String sentence = text(R.string.suspected_announcement);
         assertEquals("급발진이 의심됩니다.", String.format(sentence, KoreanParticle.subject(
-                text(EmergencyPlan.suspectedName(EmergencyType.UNINTENDED_ACCELERATION)))));
+                text(EmergencyPlan.title(EmergencyType.UNINTENDED_ACCELERATION)))));
         assertEquals("차량 화재가 의심됩니다.", String.format(sentence, KoreanParticle.subject(
-                text(EmergencyPlan.suspectedName(EmergencyType.FIRE)))));
+                text(EmergencyPlan.title(EmergencyType.FIRE)))));
         assertEquals("사고가 의심됩니다.", String.format(sentence, KoreanParticle.subject(
-                text(EmergencyPlan.suspectedName(EmergencyType.ACCIDENT)))));
+                text(EmergencyPlan.title(EmergencyType.ACCIDENT)))));
     }
 
     /** The yes/no question begins with the same sentence as the video announcement. */

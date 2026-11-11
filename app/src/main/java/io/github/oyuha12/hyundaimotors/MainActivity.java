@@ -3,8 +3,10 @@ package io.github.oyuha12.hyundaimotors;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
+import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -32,7 +34,6 @@ import io.github.oyuha12.hyundaimotors.telemetry.SimulatedTelemetrySource.Scenar
 import io.github.oyuha12.hyundaimotors.telemetry.VehicleSnapshot;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * The layout follows the window size, not device orientation: on Pleos Connect the user can
@@ -78,6 +79,8 @@ public class MainActivity extends AppCompatActivity {
     private RouteDemoOverlay routeDemo;
     private View drowsyBanner;
     private TextView drowsyText;
+    /** Video mode stand-in for saying "신고해 줘": a double tap anywhere. */
+    private GestureDetector stagedVoiceGesture;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,6 +88,14 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
+        stagedVoiceGesture = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onDoubleTap(MotionEvent event) {
+                viewModel.onStagedVoiceGesture();
+                return false;
+            }
+        });
+        stagedVoiceGesture.setIsLongpressEnabled(false);
         bindViews();
 
         View overlayView = LayoutInflater.from(this)
@@ -165,6 +176,10 @@ public class MainActivity extends AppCompatActivity {
         skipConfirmation.setChecked(viewModel.isVideoSkipConfirmation());
         skipConfirmation.setOnCheckedChangeListener(
                 (button, checked) -> viewModel.setVideoSkipConfirmation(checked));
+        MaterialSwitch stagedVoice = content.findViewById(R.id.video_staged_voice);
+        stagedVoice.setChecked(viewModel.isVideoStagedVoiceReport());
+        stagedVoice.setOnCheckedChangeListener(
+                (button, checked) -> viewModel.setVideoStagedVoiceReport(checked));
 
         AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.video_menu_title)
@@ -277,6 +292,12 @@ public class MainActivity extends AppCompatActivity {
         viewModel.getEmergency().observe(this, this::renderEmergency);
         viewModel.getStepIndex().observe(this, overlay::showStep);
         viewModel.getWaitingForStop().observe(this, overlay::showWaitingForStop);
+        viewModel.getReportReceipt().observe(this, overlay::showReceipt);
+        viewModel.getHeardReport().observe(this, overlay::showHeard);
+        viewModel.getReportVoiceStatus().observe(this, overlay::showReportVoiceStatus);
+        viewModel.getEvacuationStatusRequest().observe(this, open -> {
+            if (Boolean.TRUE.equals(open)) overlay.showEvacuationStatus();
+        });
         setDetail(detailReports, getString(R.string.mock_report_count, viewModel.getMockReportCount()));
         viewModel.getLastReport().observe(this, report -> {
             overlay.showReport(report);
@@ -361,23 +382,10 @@ public class MainActivity extends AppCompatActivity {
         tileBrake.setText(snapshot.brakePressed == null
                 ? getString(R.string.value_unknown)
                 : getString(snapshot.brakePressed ? R.string.brake_on : R.string.brake_off));
-        setDetail(detailLocation, locationLabel(snapshot));
+        setDetail(detailLocation, viewModel.locationLabel(snapshot));
         setDetail(detailCabin, snapshot.cabinTemperatureC == null
                 ? getString(R.string.value_unknown)
                 : getString(R.string.temperature_c, Math.round(snapshot.cabinTemperatureC)));
-    }
-
-    /** Video mode shows a place name; otherwise the demo label or the coordinates. */
-    private String locationLabel(VehicleSnapshot snapshot) {
-        if (viewModel.isVideoMode()) {
-            return VideoConfig.LOCATION_NAME != null
-                    ? VideoConfig.LOCATION_NAME
-                    : getString(R.string.video_screen_location_unset);
-        }
-        if (viewModel.usesDemoLocation()) return getString(R.string.demo_location_label);
-        return snapshot.hasLocation()
-                ? String.format(Locale.US, "%.4f, %.4f", snapshot.latitude, snapshot.longitude)
-                : getString(R.string.value_unknown);
     }
 
     /** The detail pane exists only in wide windows. */
@@ -418,6 +426,13 @@ public class MainActivity extends AppCompatActivity {
             default:
                 return 0;
         }
+    }
+
+    /** Watches every touch for the staged voice report's double tap, then handles it as usual. */
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        if (stagedVoiceGesture != null) stagedVoiceGesture.onTouchEvent(event);
+        return super.dispatchTouchEvent(event);
     }
 
     @Override

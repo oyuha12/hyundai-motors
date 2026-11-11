@@ -1,5 +1,6 @@
 package io.github.oyuha12.hyundaimotors;
 
+import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -14,13 +15,18 @@ import io.github.oyuha12.hyundaimotors.diagnosis.EmergencyType;
 import io.github.oyuha12.hyundaimotors.diagnosis.GuidanceStep;
 import io.github.oyuha12.hyundaimotors.facility.Facility;
 import io.github.oyuha12.hyundaimotors.report.MockEmergencyReporter;
+import io.github.oyuha12.hyundaimotors.report.ReportReceipt;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
- * Situation screen: one instruction at a time, the evacuation route, nearby help and a mock
- * report button. Narrow windows stack the parts; layout-w840dp places them side by side.
+ * Situation screen: one instruction at a time, the SOS report button and its receipt, the
+ * evacuation route and nearby help. Narrow windows stack the parts; layout-w840dp places them
+ * side by side. Reports are mock records only.
  */
 final class EmergencyOverlay {
     private final View root;
@@ -47,6 +53,15 @@ final class EmergencyOverlay {
     private final MaterialButton reportButton;
     private final TextView respondersNotice;
     private final View waitingForStop;
+    private final TextView reportVoiceStatus;
+    private final TextView heard;
+    private final View receipt;
+    private final TextView receiptLocation;
+    private final TextView receiptSituation;
+    private final TextView receiptTime;
+    private final TextView receiptSpeed;
+    private final View receiptTestNotice;
+    private boolean reported;
     private boolean motionAllowed;
     private boolean videoMode;
     @Nullable private EmergencyType shown;
@@ -75,8 +90,16 @@ final class EmergencyOverlay {
         reportButton = root.findViewById(R.id.emergency_report);
         respondersNotice = root.findViewById(R.id.responders_notice);
         waitingForStop = root.findViewById(R.id.emergency_waiting_for_stop);
+        reportVoiceStatus = root.findViewById(R.id.report_voice_status);
+        heard = root.findViewById(R.id.report_heard);
+        receipt = root.findViewById(R.id.report_receipt);
+        receiptLocation = root.findViewById(R.id.receipt_location);
+        receiptSituation = root.findViewById(R.id.receipt_situation);
+        receiptTime = root.findViewById(R.id.receipt_time);
+        receiptSpeed = root.findViewById(R.id.receipt_speed);
+        receiptTestNotice = root.findViewById(R.id.receipt_test_notice);
 
-        reportButton.setOnClickListener(v -> viewModel.submitMockReport());
+        reportButton.setOnClickListener(v -> viewModel.onSosPressed());
         root.findViewById(R.id.emergency_repeat).setOnClickListener(v -> viewModel.repeatGuidance());
         root.findViewById(R.id.emergency_dismiss).setOnClickListener(v -> viewModel.dismissEmergency());
     }
@@ -130,13 +153,61 @@ final class EmergencyOverlay {
         waitingForStop.setVisibility(Boolean.TRUE.equals(waiting) ? View.VISIBLE : View.GONE);
     }
 
-    /** Video mode: no test banner, and natural wording for the mock report. */
+    /** Video mode: no test banner or notice, and natural wording for the mock report. */
     void setVideoMode(boolean on) {
         videoMode = on;
         mockBanner.setVisibility(on ? View.GONE : View.VISIBLE);
-        reportButton.setText(VideoWording.pick(R.string.emergency_report, on));
+        receiptTestNotice.setVisibility(on ? View.GONE : View.VISIBLE);
+        updateReportButton();
         respondersNotice.setText(VideoWording.pick(R.string.responders_notice, on));
     }
+
+    /** The receipt once a report is recorded: 112 and 119, and what was passed on. */
+    void showReceipt(@Nullable ReportReceipt shownReceipt) {
+        reported = shownReceipt != null;
+        receipt.setVisibility(reported ? View.VISIBLE : View.GONE);
+        updateReportButton();
+        if (shownReceipt == null) return;
+        Context context = root.getContext();
+        receiptLocation.setText(shownReceipt.location);
+        receiptSituation.setText(EmergencyPlan.title(shownReceipt.type));
+        receiptTime.setText(new SimpleDateFormat("HH:mm:ss", Locale.KOREA)
+                .format(new Date(shownReceipt.reportedAtMillis)));
+        receiptSpeed.setText(context.getString(R.string.report_receipt_speed_value,
+                speed(context, shownReceipt.topSpeedKph), speed(context, shownReceipt.speedKph)));
+    }
+
+    private static String speed(Context context, @Nullable Float kph) {
+        return kph == null
+                ? context.getString(R.string.value_unknown)
+                : context.getString(R.string.speed_kph, Math.round(kph));
+    }
+
+    private void updateReportButton() {
+        reportButton.setEnabled(!reported);
+        reportButton.setText(reported
+                ? R.string.report_done_button
+                : VideoWording.pick(R.string.emergency_report, videoMode));
+    }
+
+    /** The recognized request, like a speech bubble: "음성 인식: '신고해 줘'". */
+    void showHeard(@Nullable String text) {
+        heard.setVisibility(text == null ? View.GONE : View.VISIBLE);
+        if (text != null) heard.setText(root.getContext().getString(R.string.report_heard, text));
+    }
+
+    /** "듣고 있습니다 …" while listening for a spoken report, or why it stopped. */
+    void showReportVoiceStatus(@Nullable Integer message) {
+        boolean visible = message != null && message != 0;
+        reportVoiceStatus.setVisibility(visible ? View.VISIBLE : View.GONE);
+        if (visible) reportVoiceStatus.setText(message);
+    }
+
+    /**
+     * The report is done and the guidance read to the end. TODO(다음 단계): open the evacuation
+     * and dispatch status screen here. Until then the situation screen stays as it is.
+     */
+    void showEvacuationStatus() {}
 
     /** Motion runs only while parked and while the screen is visible. */
     void setMotionAllowed(boolean allowed) {
@@ -149,13 +220,13 @@ final class EmergencyOverlay {
         if (message != 0) routeStatus.setText(message);
     }
 
+    /** A mock dispatch request to one facility. SOS reports show in the receipt instead. */
     void showReport(@Nullable MockEmergencyReporter.Report report) {
-        reportStatus.setVisibility(report == null ? View.GONE : View.VISIBLE);
-        if (report == null) return;
-        reportStatus.setText(report.facilityName == null
-                ? root.getContext().getString(VideoWording.pick(R.string.mock_report_done, videoMode))
-                : root.getContext().getString(
-                        VideoWording.pick(R.string.mock_dispatch_done, videoMode), report.facilityName));
+        boolean dispatch = report != null && report.facilityName != null;
+        reportStatus.setVisibility(dispatch ? View.VISIBLE : View.GONE);
+        if (!dispatch) return;
+        reportStatus.setText(root.getContext().getString(
+                VideoWording.pick(R.string.mock_dispatch_done, videoMode), report.facilityName));
     }
 
     /** Refreshes arrival estimates and, once a request is made, counts down every second. */
