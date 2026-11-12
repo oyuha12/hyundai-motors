@@ -78,6 +78,34 @@ public class VideoModeTest {
     }
 
     @Test
+    public void autoRoute_onlyAtTheChosenMomentInVideoMode() {
+        assertTrue(VideoMode.autoRoutesAt(true, AutoRoute.AFTER_REPORT, AutoRoute.AFTER_REPORT));
+        assertFalse(VideoMode.autoRoutesAt(true, AutoRoute.AFTER_REPORT, AutoRoute.ON_CONFIRM));
+        assertTrue(VideoMode.autoRoutesAt(true, AutoRoute.ON_CONFIRM, AutoRoute.ON_CONFIRM));
+        assertFalse(VideoMode.autoRoutesAt(true, AutoRoute.OFF, AutoRoute.OFF));
+        assertFalse(VideoMode.autoRoutesAt(false, AutoRoute.AFTER_REPORT, AutoRoute.AFTER_REPORT));
+        assertEquals(AutoRoute.OFF, VideoConfig.DEFAULT_AUTO_ROUTE);
+    }
+
+    @Test
+    public void autoRoute_storedChoice() {
+        for (AutoRoute moment : AutoRoute.values()) {
+            assertEquals(moment, AutoRoute.fromStored(moment.ordinal()));
+        }
+        assertEquals(AutoRoute.OFF, AutoRoute.fromStored(-1));
+        assertEquals(AutoRoute.OFF, AutoRoute.fromStored(99));
+    }
+
+    /** The in-app route screen joins the navigation request only in video mode, when chosen. */
+    @Test
+    public void fallbackRoute_offByDefault() {
+        assertTrue(VideoMode.showsFallbackRoute(true, true));
+        assertFalse(VideoMode.showsFallbackRoute(true, false));
+        assertFalse(VideoMode.showsFallbackRoute(false, true));
+        assertFalse(VideoConfig.DEFAULT_FALLBACK_ROUTE);
+    }
+
+    @Test
     public void menuScenarios_areTheVideoOnes() {
         assertEquals(Scenario.VIDEO_ACCELERATION, VideoConfig.SCENARIO_ACCELERATION);
         assertEquals(Scenario.VIDEO_FIRE, VideoConfig.SCENARIO_FIRE);
@@ -120,11 +148,13 @@ public class VideoModeTest {
     }
 
     @Test
-    public void places_coverEvacuationPoliceAndFire() {
-        assertEquals(Facility.Type.EVACUATION_SITE, VideoConfig.EVACUATION.type);
+    public void places_coverSafeStopsPoliceAndFire() {
+        assertEquals(Facility.Type.SAFE_STOP, VideoConfig.SAFE_STOP_ACCELERATION.type);
+        assertEquals(Facility.Type.SAFE_STOP, VideoConfig.SAFE_STOP_FIRE.type);
         assertEquals(Facility.Type.POLICE, VideoConfig.POLICE.type);
         assertEquals(Facility.Type.FIRE_STATION, VideoConfig.FIRE_STATION.type);
-        assertTrue(VideoConfig.PLACES.contains(VideoConfig.EVACUATION));
+        assertTrue(VideoConfig.PLACES.contains(VideoConfig.SAFE_STOP_ACCELERATION));
+        assertTrue(VideoConfig.PLACES.contains(VideoConfig.SAFE_STOP_FIRE));
         assertTrue(VideoConfig.PLACES.contains(VideoConfig.POLICE));
         assertTrue(VideoConfig.PLACES.contains(VideoConfig.FIRE_STATION));
         assertEquals(VideoConfig.SHOW_HOSPITAL, VideoConfig.PLACES.contains(VideoConfig.HOSPITAL));

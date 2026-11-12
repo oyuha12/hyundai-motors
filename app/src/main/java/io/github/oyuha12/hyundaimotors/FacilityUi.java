@@ -53,7 +53,8 @@ final class FacilityUi {
             row.setTag(facility);
             ((ImageView) row.findViewById(R.id.facility_icon)).setImageResource(icon(facility.type));
             ((TextView) row.findViewById(R.id.facility_name)).setText(facility.name);
-            ((TextView) row.findViewById(R.id.facility_detail)).setText(detail(list.getContext(), facility));
+            ((TextView) row.findViewById(R.id.facility_detail))
+                    .setText(detail(list.getContext(), facility, videoMode));
             row.findViewById(R.id.facility_route).setOnClickListener(v -> route.run(facility));
 
             MaterialButton dispatchButton = row.findViewById(R.id.facility_dispatch);
@@ -119,10 +120,21 @@ final class FacilityUi {
 
     /** Example: "병원 · 1.8km · 북서쪽". */
     static String detail(Context context, Facility facility) {
+        return detail(context, facility, false);
+    }
+
+    /** As {@link #detail(Context, Facility)}, with video mode wording for the kind of place. */
+    static String detail(Context context, Facility facility, boolean videoMode) {
         return context.getString(
                 R.string.facility_detail,
-                context.getString(label(facility.type)),
+                context.getString(label(facility.type, videoMode)),
                 Directions.describe(context, facility));
+    }
+
+    /** The kind of place; in video mode a safe stop reads "안전 정차 장소". */
+    @StringRes
+    static int label(Facility.Type type, boolean videoMode) {
+        return VideoWording.pick(label(type), videoMode);
     }
 
     @DrawableRes

@@ -84,6 +84,12 @@ public final class RouteDemoOverlay {
     }
 
     public void show(Facility facility) {
+        show(facility, java.util.Collections.emptyList());
+    }
+
+    /** @param pins places to mark on the map, such as police and fire stations */
+    public void show(Facility facility, java.util.List<RouteMapView.Pin> pins) {
+        map.setPins(pins);
         route = DemoRoute.plan(facility.distanceMeters, facility.bearingDegrees);
         destinationName = facility.name;
         destination.setText(facility.name);

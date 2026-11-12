@@ -9,6 +9,8 @@ import io.github.oyuha12.hyundaimotors.R;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.Test;
@@ -52,6 +54,9 @@ public class VideoWordingTest {
                 assertFalse(match.group(1) + " contains " + word, match.group(2).contains(word));
             }
         }
-        assertTrue(found >= VideoWording.replaced().size());
+        // Several texts may share one replacement, such as "안전 정차 장소".
+        Set<Integer> targets = new HashSet<>();
+        for (int normal : VideoWording.replaced()) targets.add(VideoWording.pick(normal, true));
+        assertTrue(found >= targets.size());
     }
 }

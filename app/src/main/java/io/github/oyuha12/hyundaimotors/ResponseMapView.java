@@ -39,6 +39,7 @@ public final class ResponseMapView extends View {
     private final int iconTint;
 
     private List<Facility> places = Collections.emptyList();
+    private boolean videoMode;
 
     public ResponseMapView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
@@ -69,9 +70,14 @@ public final class ResponseMapView extends View {
         iconTint = color(R.color.on_primary);
     }
 
-    /** The places to show, measured from the car. Places that are not set are left out. */
-    public void setPlaces(List<Facility> places) {
+    /**
+     * The places to show, measured from the car. Places that are not set are left out.
+     *
+     * @param videoMode video mode wording for the kind of place
+     */
+    public void setPlaces(List<Facility> places, boolean videoMode) {
         this.places = new ArrayList<>(places);
+        this.videoMode = videoMode;
         invalidate();
     }
 
@@ -122,7 +128,7 @@ public final class ResponseMapView extends View {
             float y = positions[i][1];
             drawMarker(canvas, place, x, y);
             String label = getContext().getString(R.string.facility_detail,
-                    getContext().getString(FacilityUi.label(place.type)),
+                    getContext().getString(FacilityUi.label(place.type, videoMode)),
                     Directions.distance(getContext(), place.distanceMeters));
             drawLabel(canvas, label, x, y + 28 * density);
         }
@@ -157,7 +163,7 @@ public final class ResponseMapView extends View {
 
     /** 112 blue, 119 red, evacuation green: the Pleos informative colors. */
     @ColorRes
-    private static int markerColor(Facility.Type type) {
+    static int markerColor(Facility.Type type) {
         switch (type) {
             case POLICE:
                 return R.color.primary;

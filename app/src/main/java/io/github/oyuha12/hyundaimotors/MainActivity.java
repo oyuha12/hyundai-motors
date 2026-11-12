@@ -1,5 +1,6 @@
 package io.github.oyuha12.hyundaimotors;
 
+import ai.pleos.playground.navi.data.TBTInfo;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
@@ -13,6 +14,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -24,12 +26,14 @@ import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.navigation.NavigationBarView;
+import io.github.oyuha12.hyundaimotors.demo.AutoRoute;
 import io.github.oyuha12.hyundaimotors.demo.RouteDemoOverlay;
+import io.github.oyuha12.hyundaimotors.demo.RouteMapView;
 import io.github.oyuha12.hyundaimotors.demo.VideoConfig;
 import io.github.oyuha12.hyundaimotors.demo.VideoWording;
 import io.github.oyuha12.hyundaimotors.diagnosis.EmergencyType;
 import io.github.oyuha12.hyundaimotors.facility.Facility;
-import io.github.oyuha12.hyundaimotors.facility.RouteNavigator;
+import io.github.oyuha12.hyundaimotors.facility.MiniMapScale;
 import io.github.oyuha12.hyundaimotors.telemetry.SimulatedTelemetrySource.Scenario;
 import io.github.oyuha12.hyundaimotors.telemetry.VehicleSnapshot;
 import java.util.ArrayList;
@@ -143,7 +147,7 @@ public class MainActivity extends AppCompatActivity {
         });
         viewModel.getDemoRouteRequest().observe(this, facility -> {
             if (facility == null) return;
-            routeDemo.show(facility);
+            routeDemo.show(facility, routePins(facility));
             viewModel.onDemoRouteShown();
         });
 
@@ -187,6 +191,22 @@ public class MainActivity extends AppCompatActivity {
         stagedVoice.setChecked(viewModel.isVideoStagedVoiceReport());
         stagedVoice.setOnCheckedChangeListener(
                 (button, checked) -> viewModel.setVideoStagedVoiceReport(checked));
+        MaterialSwitch fallbackRoute = content.findViewById(R.id.video_fallback_route);
+        fallbackRoute.setChecked(viewModel.isVideoFallbackRoute());
+        fallbackRoute.setOnCheckedChangeListener(
+                (button, checked) -> viewModel.setVideoFallbackRoute(checked));
+        ChipGroup autoRoutes = content.findViewById(R.id.video_auto_route);
+        AutoRoute autoRoute = viewModel.getVideoAutoRoute();
+        for (AutoRoute moment : AutoRoute.values()) {
+            Chip chip = (Chip) inflater.inflate(R.layout.item_video_lead_in, autoRoutes, false);
+            chip.setId(View.generateViewId());
+            chip.setText(autoRouteLabel(moment));
+            autoRoutes.addView(chip);
+            chip.setChecked(moment == autoRoute);
+            chip.setOnCheckedChangeListener((button, checked) -> {
+                if (checked) viewModel.setVideoAutoRoute(moment);
+            });
+        }
 
         AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.video_menu_title)
@@ -314,7 +334,8 @@ public class MainActivity extends AppCompatActivity {
         });
         viewModel.getEventRecordCount().observe(this, count ->
                 setDetail(findViewById(R.id.detail_events), getString(R.string.event_count, count)));
-        viewModel.getRouteStatus().observe(this, this::renderRouteStatus);
+        viewModel.getRouteMessage().observe(this, this::renderRouteStatus);
+        viewModel.getNextTurn().observe(this, this::renderNextTurn);
         viewModel.getDispatches().observe(this, overlay::showDispatches);
         viewModel.getVoiceStatus().observe(this, confirmOverlay::showVoiceStatus);
         viewModel.getCountdown().observe(this, confirmOverlay::showCountdown);
@@ -383,6 +404,8 @@ public class MainActivity extends AppCompatActivity {
         overlay.showEmergency(confirmed);
         if (confirmed != null) overlay.showStep(viewModel.getStepIndex().getValue());
         renderEvacuationStatus();
+        // Video mode: the in-app route ends with the situation, so the next run starts clean.
+        if (active == null && viewModel.isVideoMode() && routeDemo.isShowing()) routeDemo.close();
         boolean normal = active == null;
         coreValue.setText(normal ? R.string.status_normal : R.string.status_alert);
         coreValue.setTextColor(ContextCompat.getColor(
@@ -426,24 +449,45 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void renderRouteStatus(RouteNavigator.Status status) {
-        int message = routeMessage(status);
-        routeStatus.setVisibility(message == 0 ? View.GONE : View.VISIBLE);
-        if (message != 0) routeStatus.setText(message);
-        overlay.showRouteStatus(message);
+    /** The navigation app's answer to a route request, on every screen that sends routes. */
+    private void renderRouteStatus(@Nullable Integer message) {
+        int text = message == null || message == 0
+                ? 0
+                : VideoWording.pick(message, viewModel.isVideoMode());
+        routeStatus.setVisibility(text == 0 ? View.GONE : View.VISIBLE);
+        if (text != 0) routeStatus.setText(text);
+        overlay.showRouteStatus(text);
+        statusOverlay.showRouteStatus(text);
     }
 
-    private static int routeMessage(RouteNavigator.Status status) {
-        switch (status) {
-            case REQUESTED:
-                return R.string.route_requested;
-            case STARTED:
-                return R.string.route_started;
-            case FAILED:
-                return R.string.route_failed;
+    private void renderNextTurn(@Nullable TBTInfo turn) {
+        String text = turn == null ? null : Directions.nextTurn(this, turn);
+        overlay.showNextTurn(text);
+        statusOverlay.showNextTurn(text);
+    }
+
+    @StringRes
+    private static int autoRouteLabel(AutoRoute moment) {
+        switch (moment) {
+            case AFTER_REPORT:
+                return R.string.video_auto_route_after_report;
+            case ON_CONFIRM:
+                return R.string.video_auto_route_on_confirm;
+            case OFF:
             default:
-                return 0;
+                return R.string.video_auto_route_off;
         }
+    }
+
+    /** Police and fire stations on the in-app route screen, in video mode, where they are. */
+    private List<RouteMapView.Pin> routePins(Facility destination) {
+        List<RouteMapView.Pin> pins = new ArrayList<>();
+        for (Facility facility : viewModel.routePins(destination)) {
+            float[] offset = MiniMapScale.offset(facility.bearingDegrees, facility.distanceMeters, 1);
+            pins.add(new RouteMapView.Pin(offset[0], -offset[1],
+                    FacilityUi.icon(facility.type), ResponseMapView.markerColor(facility.type)));
+        }
+        return pins;
     }
 
     /** Watches every touch for the staged voice report's double tap, then handles it as usual. */

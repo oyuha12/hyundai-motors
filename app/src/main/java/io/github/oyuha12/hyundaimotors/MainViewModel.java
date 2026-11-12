@@ -1,5 +1,6 @@
 package io.github.oyuha12.hyundaimotors;
 
+import ai.pleos.playground.navi.data.TBTInfo;
 import android.app.Application;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -16,6 +17,7 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 import io.github.oyuha12.hyundaimotors.data.FakeDrivingStateSource;
+import io.github.oyuha12.hyundaimotors.demo.AutoRoute;
 import io.github.oyuha12.hyundaimotors.demo.VideoConfig;
 import io.github.oyuha12.hyundaimotors.demo.VideoMode;
 import io.github.oyuha12.hyundaimotors.demo.VideoPlace;
@@ -228,6 +230,7 @@ public final class MainViewModel extends AndroidViewModel {
             @Override
             public void onReportFinished() {
                 evacuationStatusShown.setValue(true);
+                autoRoute(AutoRoute.AFTER_REPORT);
             }
         });
         videoMode.setValue(demoPrefs().getBoolean(KEY_VIDEO_MODE, false));
@@ -427,6 +430,7 @@ public final class MainViewModel extends AndroidViewModel {
         }
         guidanceLead = lead;
         sequencer.start(EmergencyPlan.steps(confirmed.type));
+        autoRoute(AutoRoute.ON_CONFIRM);
     }
 
     /** "No", by voice or touch. Returns to the home screen. */
@@ -491,7 +495,10 @@ public final class MainViewModel extends AndroidViewModel {
         stopAllSpeech();
         dismissed = current != null && current.detected ? current.type : null;
         sequencer.stop();
+        stepIndex.setValue(0);
         clearReport();
+        // Video mode: the next run starts with no destination left in the navigation app.
+        if (isVideoMode()) navigator.endRoute();
         emergency.setValue(null);
         lastReport.setValue(null);
         dispatches.setValue(Collections.emptyMap());
@@ -766,14 +773,21 @@ public final class MainViewModel extends AndroidViewModel {
         return facilities().findNearby(latitude(), longitude());
     }
 
+    /** Where to go: in video mode the situation's safe stop place, or null where it has none. */
     @Nullable
     public Facility evacuationTarget(EmergencyType type) {
-        return facilities().nearest(evacuationType(type), latitude(), longitude());
+        if (!isVideoMode()) {
+            return facilities().nearest(evacuationType(type), latitude(), longitude());
+        }
+        VideoPlace place = VideoConfig.safeStopFor(type);
+        if (place == null || place.type == null) return null;
+        return VideoPlace.repositoryOf(Collections.singletonList(place))
+                .nearest(place.type, latitude(), longitude());
     }
 
-    /** The video has one evacuation place for every situation. */
+    /** The video has a safe stop place ("안전 정차 장소") for each scenario. */
     private Facility.Type evacuationType(EmergencyType type) {
-        return isVideoMode() ? Facility.Type.EVACUATION_SITE : EmergencyPlan.evacuationTarget(type);
+        return isVideoMode() ? Facility.Type.SAFE_STOP : EmergencyPlan.evacuationTarget(type);
     }
 
     /** The evacuation line of the status screen, also when its place is not set. */
@@ -858,11 +872,50 @@ public final class MainViewModel extends AndroidViewModel {
 
     /** Sends a route to the navigation app, or shows the in-app demo route when that is on. */
     public void navigateTo(Facility facility) {
+        if (isVideoMode()) {
+            // Always the Pleos navigation app through NaviHelper. The in-app route can show on
+            // top, for an emulator whose navigation app cannot draw maps.
+            navigator.navigateTo(facility);
+            if (VideoMode.showsFallbackRoute(true, isVideoFallbackRoute())) {
+                demoRouteRequest.setValue(facility);
+            }
+            return;
+        }
         if (isDemoRouteEnabled()) {
             demoRouteRequest.setValue(facility);
         } else {
             navigator.navigateTo(facility);
         }
+    }
+
+    /** Video mode: sends the evacuation route by itself at the moment chosen in the menu. */
+    private void autoRoute(AutoRoute moment) {
+        ActiveEmergency active = emergency.getValue();
+        if (active == null
+                || !VideoMode.autoRoutesAt(isVideoMode(), getVideoAutoRoute(), moment)) {
+            return;
+        }
+        Facility target = evacuationTarget(active.type);
+        if (target == null) {
+            navigator.reportNoDestination();
+        } else {
+            navigateTo(target);
+        }
+    }
+
+    /**
+     * Police and fire stations to pin on the in-app route screen, in video mode only. The
+     * destination itself is left out.
+     */
+    public List<Facility> routePins(Facility destination) {
+        List<Facility> pins = new ArrayList<>();
+        if (!isVideoMode()) return pins;
+        for (Facility facility : facilities().nearestOfEach(
+                Arrays.asList(Facility.Type.POLICE, Facility.Type.FIRE_STATION),
+                latitude(), longitude())) {
+            if (!facility.name.equals(destination.name)) pins.add(facility);
+        }
+        return pins;
     }
 
     // ---- Demo settings for PC emulator videos --------------------------------------------------
@@ -904,7 +957,16 @@ public final class MainViewModel extends AndroidViewModel {
 
     /** Speaks a short message, for example demo route instructions. */
     public void say(String text) {
+        // Video mode: the guidance and report voice go first; the in-app route stays quiet.
+        if (isVideoMode() && isGuidanceSpeaking()) return;
         speaker.speak(text, null);
+    }
+
+    /** Guidance steps, or the report offer and listening after them, are still going on. */
+    private boolean isGuidanceSpeaking() {
+        ActiveEmergency current = emergency.getValue();
+        if (current == null || !current.confirmed) return false;
+        return !sequencer.isFinished() || !reportFlow.isReported();
     }
 
     // ---- Video mode for the demo video ---------------------------------------------------------
@@ -913,6 +975,8 @@ public final class MainViewModel extends AndroidViewModel {
     private static final String KEY_VIDEO_LEAD_IN = "video_lead_in_seconds";
     private static final String KEY_VIDEO_SKIP_CONFIRMATION = "video_skip_confirmation";
     private static final String KEY_VIDEO_STAGED_VOICE = "video_staged_voice_report";
+    private static final String KEY_VIDEO_AUTO_ROUTE = "video_auto_route";
+    private static final String KEY_VIDEO_FALLBACK_ROUTE = "video_fallback_route";
 
     public LiveData<Boolean> getVideoMode() {
         return videoMode;
@@ -960,6 +1024,26 @@ public final class MainViewModel extends AndroidViewModel {
         demoPrefs().edit().putBoolean(KEY_VIDEO_STAGED_VOICE, on).apply();
     }
 
+    /** Video mode: when the evacuation route goes to the navigation app by itself. Off by default. */
+    public AutoRoute getVideoAutoRoute() {
+        return AutoRoute.fromStored(demoPrefs().getInt(
+                KEY_VIDEO_AUTO_ROUTE, VideoConfig.DEFAULT_AUTO_ROUTE.ordinal()));
+    }
+
+    public void setVideoAutoRoute(AutoRoute moment) {
+        demoPrefs().edit().putInt(KEY_VIDEO_AUTO_ROUTE, moment.ordinal()).apply();
+    }
+
+    /** Video mode: the in-app route screen also shows for each route. Off by default. */
+    public boolean isVideoFallbackRoute() {
+        return demoPrefs().getBoolean(
+                KEY_VIDEO_FALLBACK_ROUTE, VideoConfig.DEFAULT_FALLBACK_ROUTE);
+    }
+
+    public void setVideoFallbackRoute(boolean on) {
+        demoPrefs().edit().putBoolean(KEY_VIDEO_FALLBACK_ROUTE, on).apply();
+    }
+
     private void refreshDriving() {
         boolean value = isVideoMode()
                 ? drivingBySpeed
@@ -969,8 +1053,14 @@ public final class MainViewModel extends AndroidViewModel {
 
     // ---- Observables --------------------------------------------------------------------------
 
-    public LiveData<RouteNavigator.Status> getRouteStatus() {
-        return navigator.getStatus();
+    /** The navigation app's answer to our route, as a string resource, or 0. */
+    public LiveData<Integer> getRouteMessage() {
+        return navigator.getMessage();
+    }
+
+    /** The next turn while the navigation app guides our route, or null. */
+    public LiveData<TBTInfo> getNextTurn() {
+        return navigator.getNextTurn();
     }
 
     public LiveData<VehicleSnapshot> getSnapshot() {

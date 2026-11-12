@@ -1,5 +1,7 @@
 package io.github.oyuha12.hyundaimotors.demo;
 
+import androidx.annotation.Nullable;
+import io.github.oyuha12.hyundaimotors.diagnosis.EmergencyType;
 import io.github.oyuha12.hyundaimotors.facility.Facility;
 import io.github.oyuha12.hyundaimotors.telemetry.GeoPoint;
 import io.github.oyuha12.hyundaimotors.telemetry.SimulatedTelemetrySource.Scenario;
@@ -10,7 +12,7 @@ import java.util.List;
 /**
  * Settings for the demo video, kept in one place. They take effect only while video mode is on.
  *
- * <p>Values marked TODO wait for the team. Never fill them with made-up places or coordinates.
+ * <p>Places come from the team. Never fill them with made-up places or coordinates.
  */
 public final class VideoConfig {
     private VideoConfig() {}
@@ -24,53 +26,67 @@ public final class VideoConfig {
 
     // ---- Real places for the video -------------------------------------------------------------
     //
-    // TODO(영상): fill in each name, latitude and longitude from the team. Never make them up.
-    // Leave a value null until it is known: screens then show "장소 미설정" (or "위치 이름 미설정")
-    // and leave the place out of distances, countdowns and the mini map. Once a place has a name
-    // and both coordinates it shows everywhere with no other change.
+    // From the team (2026-11-12). Coordinates were converted from Google Maps plus codes. Never
+    // replace them with made-up places. A place left null shows "장소 미설정" and stays out of
+    // distances, countdowns and the mini map. The address is optional: it goes to the navigation
+    // app with the route.
 
     /**
      * Filming location. The name shows on the home screen and the report receipt. The
      * coordinates stand in until the location SDK reports a position, and are what 장정인 types
-     * into the emulator's Location setting.
+     * into the emulator's Location setting. Same point as FALLBACK_POSITION.
      */
     public static final VideoPlace FILMING = new VideoPlace(
-            null,
-            null, // TODO(영상): 촬영 위치 이름
-            null, // TODO(영상): 위도
-            null); // TODO(영상): 경도
-
-    public static final VideoPlace EVACUATION = new VideoPlace(
-            Facility.Type.EVACUATION_SITE,
-            null, // TODO(영상): 대피 장소 이름
-            null, // TODO(영상): 위도
-            null); // TODO(영상): 경도
+            null, "서울 강남구 도곡동 (양재역 부근)", 37.48544722, 127.03636666);
 
     public static final VideoPlace POLICE = new VideoPlace(
-            Facility.Type.POLICE,
-            null, // TODO(영상): 경찰서 이름
-            null, // TODO(영상): 위도
-            null); // TODO(영상): 경도
+            Facility.Type.POLICE, "서초경찰서 서초2파출소", 37.4875125, 127.0289844);
 
     public static final VideoPlace FIRE_STATION = new VideoPlace(
-            Facility.Type.FIRE_STATION,
-            null, // TODO(영상): 소방서 이름
-            null, // TODO(영상): 위도
-            null); // TODO(영상): 경도
+            Facility.Type.FIRE_STATION, "서초소방서 양재119안전센터", 37.4694375, 127.0408281,
+            "서울 서초구 동산로 9");
 
     /** Optional. Set SHOW_HOSPITAL to false to leave hospitals out of the video. */
     public static final VideoPlace HOSPITAL = new VideoPlace(
-            Facility.Type.HOSPITAL,
-            null, // TODO(영상): 병원 이름
-            null, // TODO(영상): 위도
-            null); // TODO(영상): 경도
+            Facility.Type.HOSPITAL, "강남세브란스병원 응급실", 37.4927375, 127.0462656,
+            "서울 강남구 언주로 211");
 
     public static final boolean SHOW_HOSPITAL = true;
 
-    /** The places video mode uses in place of the sample facilities. */
-    public static final List<VideoPlace> PLACES = SHOW_HOSPITAL
-            ? Collections.unmodifiableList(Arrays.asList(EVACUATION, POLICE, FIRE_STATION, HOSPITAL))
-            : Collections.unmodifiableList(Arrays.asList(EVACUATION, POLICE, FIRE_STATION));
+    // Safe stop places ("안전 정차 장소"), one per scenario.
+
+    public static final VideoPlace SAFE_STOP_ACCELERATION = new VideoPlace(
+            Facility.Type.SAFE_STOP, "양재역 공영주차장", 37.4785375, 127.0413281);
+
+    /** Fire: an above-ground lot. A burning car must never be sent indoors or underground. */
+    public static final VideoPlace SAFE_STOP_FIRE = new VideoPlace(
+            Facility.Type.SAFE_STOP, "매헌윤봉길의사기념관 주차장(지상)", 37.4690125, 127.0364219);
+
+    /** The third scenario (collision): the same lot as unintended acceleration, for now. */
+    public static final VideoPlace SAFE_STOP_COLLISION = SAFE_STOP_ACCELERATION;
+
+    /**
+     * Where the car should stop in each situation the video shows. Other situations have no safe
+     * stop place in the video and show "장소 미설정".
+     */
+    @Nullable
+    public static VideoPlace safeStopFor(EmergencyType type) {
+        switch (type) {
+            case UNINTENDED_ACCELERATION:
+                return SAFE_STOP_ACCELERATION;
+            case FIRE:
+                return SAFE_STOP_FIRE;
+            case ACCIDENT:
+                return SAFE_STOP_COLLISION;
+            default:
+                return null;
+        }
+    }
+
+    /** The places video mode uses in place of the sample facilities, for example nearby. */
+    public static final List<VideoPlace> PLACES = Collections.unmodifiableList(SHOW_HOSPITAL
+            ? Arrays.asList(SAFE_STOP_ACCELERATION, SAFE_STOP_FIRE, POLICE, FIRE_STATION, HOSPITAL)
+            : Arrays.asList(SAFE_STOP_ACCELERATION, SAFE_STOP_FIRE, POLICE, FIRE_STATION));
 
     /** Normal driving before the scenario begins, to line up with the dashcam footage. */
     public static final List<Integer> LEAD_IN_SECONDS =
@@ -86,6 +102,15 @@ public final class VideoConfig {
      * while a report is awaited. Off unless turned on in the menu.
      */
     public static final boolean DEFAULT_STAGED_VOICE_REPORT = false;
+
+    /** When to send the safe stop route to the navigation app without a tap. */
+    public static final AutoRoute DEFAULT_AUTO_ROUTE = AutoRoute.OFF;
+
+    /**
+     * Also show the in-app route screen over the navigation request, for an emulator whose
+     * navigation app cannot draw maps. Off unless turned on in the menu.
+     */
+    public static final boolean DEFAULT_FALLBACK_ROUTE = false;
 
     /** Above this speed the car shows as driving in video mode. */
     public static final float DRIVING_SPEED_KPH = 1f;

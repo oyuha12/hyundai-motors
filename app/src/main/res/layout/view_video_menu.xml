@@ -45,6 +45,30 @@
             android:text="@string/video_menu_staged_voice"
             android:textAppearance="@style/TextAppearance.App.Body" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/gap"
+            android:text="@string/video_menu_auto_route"
+            android:textAppearance="@style/TextAppearance.App.Label"
+            android:textColor="@color/on_surface_variant" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/video_auto_route"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/gap_small"
+            app:selectionRequired="true"
+            app:singleSelection="true" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/video_fallback_route"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="@dimen/touch_target"
+            android:text="@string/video_menu_fallback_route"
+            android:textAppearance="@style/TextAppearance.App.Body" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/video_scenario_acceleration"
             style="@style/Widget.App.Button.Tonal"

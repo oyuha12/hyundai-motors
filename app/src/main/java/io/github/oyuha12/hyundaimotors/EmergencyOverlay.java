@@ -115,7 +115,8 @@ final class EmergencyOverlay {
         icon.setImageResource(FacilityUi.situationIcon(active.type));
         title.setText(EmergencyPlan.title(active.type));
         reason.setText(active.reason);
-        evacuationInstruction.setText(EmergencyPlan.evacuationInstruction(active.type));
+        evacuationInstruction.setText(
+                VideoWording.pick(EmergencyPlan.evacuationInstruction(active.type), videoMode));
         evacuationIcon.setImageResource(FacilityUi.icon(EmergencyPlan.evacuationTarget(active.type)));
 
         Facility target = viewModel.evacuationTarget(active.type);
@@ -165,6 +166,8 @@ final class EmergencyOverlay {
         videoMode = on;
         mockBanner.setVisibility(on ? View.GONE : View.VISIBLE);
         receiptTestNotice.setVisibility(on ? View.GONE : View.VISIBLE);
+        ((TextView) root.findViewById(R.id.evacuation_title))
+                .setText(VideoWording.pick(R.string.evacuation_title, on));
         updateReportButton();
         respondersNotice.setText(VideoWording.pick(R.string.responders_notice, on));
     }
@@ -220,6 +223,13 @@ final class EmergencyOverlay {
     void showRouteStatus(@StringRes int message) {
         routeStatus.setVisibility(message == 0 ? View.GONE : View.VISIBLE);
         if (message != 0) routeStatus.setText(message);
+    }
+
+    /** "다음 안내: 300m 앞 우회전" while the navigation app guides the route, or null. */
+    void showNextTurn(@Nullable String text) {
+        TextView view = root.findViewById(R.id.emergency_next_turn);
+        view.setVisibility(text == null ? View.GONE : View.VISIBLE);
+        view.setText(text);
     }
 
     /** A mock dispatch request to one facility. SOS reports show in the receipt instead. */

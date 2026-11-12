@@ -27,6 +27,7 @@
                     app:tint="@color/negative" />
 
                 <TextView
+                    android:id="@+id/evacuation_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/evacuation_title"
@@ -72,6 +73,16 @@
                 android:layout_marginTop="@dimen/gap"
                 android:textAppearance="@style/TextAppearance.App.Body"
                 android:textColor="@color/primary"
+                android:visibility="gone" />
+
+            <!-- Turn by turn from the navigation app while it guides our route. -->
+            <TextView
+                android:id="@+id/emergency_next_turn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/gap_small"
+                android:textAppearance="@style/TextAppearance.App.Label"
+                android:textColor="@color/on_surface_variant"
                 android:visibility="gone" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>

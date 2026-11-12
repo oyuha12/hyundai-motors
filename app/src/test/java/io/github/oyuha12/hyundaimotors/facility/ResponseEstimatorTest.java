@@ -10,7 +10,7 @@ import org.junit.Test;
 
 public class ResponseEstimatorTest {
     private static Facility at(Type type, int meters) {
-        return new Facility(type, "샘플", 0, 0, meters, 0);
+        return new Facility(type, "샘플", 0, 0, meters, 0, null);
     }
 
     @Test

@@ -52,6 +52,16 @@ public final class VideoMode {
         return videoMode && stagedSetting;
     }
 
+    /** Whether to send the evacuation route now: video mode, with the menu set to this moment. */
+    public static boolean autoRoutesAt(boolean videoMode, AutoRoute setting, AutoRoute moment) {
+        return videoMode && moment != AutoRoute.OFF && setting == moment;
+    }
+
+    /** The in-app route screen joins the navigation request only in video mode, when chosen. */
+    public static boolean showsFallbackRoute(boolean videoMode, boolean fallbackSetting) {
+        return videoMode && fallbackSetting;
+    }
+
     /** A stored lead-in, or the default when it is not one of the menu's choices. */
     public static int leadInSeconds(int stored) {
         return VideoConfig.LEAD_IN_SECONDS.contains(stored)
