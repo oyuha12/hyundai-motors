@@ -109,6 +109,21 @@ public class RouteSessionTest {
         assertEquals(0, session.message());
     }
 
+    /** Something to cancel at "상황 종료" only while our route is requested or guided. */
+    @Test
+    public void active_whileRequestedOrGuided() {
+        assertFalse(session.isActive());
+        session.onRequested("대피 장소");
+        assertTrue(session.isActive());
+        session.onRoutingCompleted();
+        assertTrue(session.isActive());
+        session.onDestinationArrived();
+        assertFalse(session.isActive());
+        session.onRequested("경찰서");
+        session.onError(NaviErrorCode.CAUSE_SEARCH_ROUTE);
+        assertFalse(session.isActive());
+    }
+
     @Test
     public void clear_forgetsTheRoute() {
         session.onRequested("대피 장소");

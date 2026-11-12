@@ -159,6 +159,23 @@ public final class RouteNavigator {
         publish();
     }
 
+    /**
+     * Ends the route we asked for, if it is still going: the navigation app drops the
+     * destination and the screen forgets it. A route the driver set alone is left alone.
+     */
+    public void endRoute() {
+        if (session.isActive() && naviHelper != null && connected) {
+            try {
+                naviHelper.cancelRoute();
+                Log.i(TAG, "cancelRoute: situation ended");
+            } catch (RuntimeException error) {
+                Log.w(TAG, "cancelRoute failed", error);
+            }
+        }
+        session.clear();
+        publish();
+    }
+
     /** There is no place to route to, for example a video place still marked TODO. */
     public void reportNoDestination() {
         Log.i(TAG, "requestRoute skipped: no destination set");

@@ -495,7 +495,10 @@ public final class MainViewModel extends AndroidViewModel {
         stopAllSpeech();
         dismissed = current != null && current.detected ? current.type : null;
         sequencer.stop();
+        stepIndex.setValue(0);
         clearReport();
+        // Video mode: the next run starts with no destination left in the navigation app.
+        if (isVideoMode()) navigator.endRoute();
         emergency.setValue(null);
         lastReport.setValue(null);
         dispatches.setValue(Collections.emptyMap());

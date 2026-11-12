@@ -404,6 +404,8 @@ public class MainActivity extends AppCompatActivity {
         overlay.showEmergency(confirmed);
         if (confirmed != null) overlay.showStep(viewModel.getStepIndex().getValue());
         renderEvacuationStatus();
+        // Video mode: the in-app route ends with the situation, so the next run starts clean.
+        if (active == null && viewModel.isVideoMode() && routeDemo.isShowing()) routeDemo.close();
         boolean normal = active == null;
         coreValue.setText(normal ? R.string.status_normal : R.string.status_alert);
         coreValue.setTextColor(ContextCompat.getColor(

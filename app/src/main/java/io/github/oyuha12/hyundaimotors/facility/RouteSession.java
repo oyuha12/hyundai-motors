@@ -125,6 +125,11 @@ public final class RouteSession {
         return destination;
     }
 
+    /** Our route is requested, started or guided: there is something to cancel. */
+    public boolean isActive() {
+        return phase == Phase.REQUESTED || isGuiding();
+    }
+
     /** While the navigation app guides our route, turn-by-turn information is worth asking for. */
     public boolean isGuiding() {
         return phase == Phase.STARTED || phase == Phase.GUIDING;

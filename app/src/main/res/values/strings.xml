@@ -305,7 +305,7 @@
     <!-- The video's places are safe stop places: "대피 장소" reads "안전 정차 장소". -->
     <string name="video_screen_safe_stop">안전 정차 장소</string>
     <string name="video_screen_evacuation_ua">비상등을 켜고 안전 정차 장소로 이동하세요</string>
-    <string name="video_screen_evacuation_fire">차에서 내려 안전 정차 장소로 이동하세요</string>
+    <string name="video_screen_evacuation_fire">비상등을 켜고 안전 정차 장소로 이동하세요</string>
     <string name="video_screen_evacuation_accident">차가 움직일 수 있으면 안전 정차 장소로 옮기세요</string>
     <string name="video_screen_route_no_destination">안전 정차 장소가 설정되지 않아 경로를 요청하지 않았습니다</string>
     <string name="video_screen_dispatch_request">출동 요청</string>
