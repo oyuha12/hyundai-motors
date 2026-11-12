@@ -148,11 +148,13 @@ public class VideoModeTest {
     }
 
     @Test
-    public void places_coverEvacuationPoliceAndFire() {
-        assertEquals(Facility.Type.EVACUATION_SITE, VideoConfig.EVACUATION.type);
+    public void places_coverSafeStopsPoliceAndFire() {
+        assertEquals(Facility.Type.SAFE_STOP, VideoConfig.SAFE_STOP_ACCELERATION.type);
+        assertEquals(Facility.Type.SAFE_STOP, VideoConfig.SAFE_STOP_FIRE.type);
         assertEquals(Facility.Type.POLICE, VideoConfig.POLICE.type);
         assertEquals(Facility.Type.FIRE_STATION, VideoConfig.FIRE_STATION.type);
-        assertTrue(VideoConfig.PLACES.contains(VideoConfig.EVACUATION));
+        assertTrue(VideoConfig.PLACES.contains(VideoConfig.SAFE_STOP_ACCELERATION));
+        assertTrue(VideoConfig.PLACES.contains(VideoConfig.SAFE_STOP_FIRE));
         assertTrue(VideoConfig.PLACES.contains(VideoConfig.POLICE));
         assertTrue(VideoConfig.PLACES.contains(VideoConfig.FIRE_STATION));
         assertEquals(VideoConfig.SHOW_HOSPITAL, VideoConfig.PLACES.contains(VideoConfig.HOSPITAL));

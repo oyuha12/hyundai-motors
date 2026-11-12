@@ -88,7 +88,7 @@ final class EvacuationStatusOverlay {
             evacuationRoute.setOnClickListener(v -> viewModel.navigateTo(target));
         } else {
             evacuationName.setText(R.string.place_unset);
-            evacuationDetail.setText(FacilityUi.label(evacuation.type));
+            evacuationDetail.setText(FacilityUi.label(evacuation.type, videoMode));
             evacuationRoute.setOnClickListener(null);
         }
 
@@ -107,15 +107,15 @@ final class EvacuationStatusOverlay {
             if (facility != null) {
                 onMap.add(facility);
                 name.setText(facility.name);
-                detail.setText(FacilityUi.detail(context, facility));
+                detail.setText(FacilityUi.detail(context, facility, videoMode));
                 route.setOnClickListener(v -> viewModel.navigateTo(facility));
             } else {
                 name.setText(R.string.place_unset);
-                detail.setText(FacilityUi.label(place.type));
+                detail.setText(FacilityUi.label(place.type, videoMode));
             }
             responders.addView(row);
         }
-        map.setPlaces(onMap);
+        map.setPlaces(onMap, videoMode);
     }
 
     /** The report time in the header. */
@@ -159,6 +159,8 @@ final class EvacuationStatusOverlay {
     void setVideoMode(boolean on) {
         videoMode = on;
         notice.setText(VideoWording.pick(R.string.responders_notice, on));
+        ((TextView) root.findViewById(R.id.status_evacuation_title))
+                .setText(VideoWording.pick(R.string.status_evacuation, on));
     }
 
     private final Runnable tick = new Runnable() {

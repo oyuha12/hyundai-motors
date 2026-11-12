@@ -770,14 +770,21 @@ public final class MainViewModel extends AndroidViewModel {
         return facilities().findNearby(latitude(), longitude());
     }
 
+    /** Where to go: in video mode the situation's safe stop place, or null where it has none. */
     @Nullable
     public Facility evacuationTarget(EmergencyType type) {
-        return facilities().nearest(evacuationType(type), latitude(), longitude());
+        if (!isVideoMode()) {
+            return facilities().nearest(evacuationType(type), latitude(), longitude());
+        }
+        VideoPlace place = VideoConfig.safeStopFor(type);
+        if (place == null || place.type == null) return null;
+        return VideoPlace.repositoryOf(Collections.singletonList(place))
+                .nearest(place.type, latitude(), longitude());
     }
 
-    /** The video has one evacuation place for every situation. */
+    /** The video has a safe stop place ("안전 정차 장소") for each scenario. */
     private Facility.Type evacuationType(EmergencyType type) {
-        return isVideoMode() ? Facility.Type.EVACUATION_SITE : EmergencyPlan.evacuationTarget(type);
+        return isVideoMode() ? Facility.Type.SAFE_STOP : EmergencyPlan.evacuationTarget(type);
     }
 
     /** The evacuation line of the status screen, also when its place is not set. */

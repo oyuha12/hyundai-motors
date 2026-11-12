@@ -449,7 +449,9 @@ public class MainActivity extends AppCompatActivity {
 
     /** The navigation app's answer to a route request, on every screen that sends routes. */
     private void renderRouteStatus(@Nullable Integer message) {
-        int text = message == null ? 0 : message;
+        int text = message == null || message == 0
+                ? 0
+                : VideoWording.pick(message, viewModel.isVideoMode());
         routeStatus.setVisibility(text == 0 ? View.GONE : View.VISIBLE);
         if (text != 0) routeStatus.setText(text);
         overlay.showRouteStatus(text);

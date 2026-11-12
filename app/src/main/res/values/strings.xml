@@ -292,7 +292,7 @@
     <string name="video_menu_off">영상 모드 끄기</string>
     <string name="video_menu_skip_confirmation">확인 질문 없이 바로 대처 안내</string>
     <string name="video_menu_staged_voice">음성 신고 연출 (신고 대기 중 화면 두 번 탭)</string>
-    <string name="video_menu_auto_route">대피 장소 자동 경로 안내</string>
+    <string name="video_menu_auto_route">안전 정차 장소 자동 경로 안내</string>
     <string name="video_auto_route_off">끔</string>
     <string name="video_auto_route_after_report">신고 후</string>
     <string name="video_auto_route_on_confirm">상황 확인 직후</string>
@@ -302,6 +302,12 @@
     <string name="video_screen_location_unset">위치 이름 미설정</string>
     <string name="video_screen_emergency_report">SOS 신고</string>
     <string name="video_screen_report_announcement">119와 112에 신고를 접수했습니다. 현재 위치를 전달했습니다.</string>
+    <!-- The video's places are safe stop places: "대피 장소" reads "안전 정차 장소". -->
+    <string name="video_screen_safe_stop">안전 정차 장소</string>
+    <string name="video_screen_evacuation_ua">비상등을 켜고 안전 정차 장소로 이동하세요</string>
+    <string name="video_screen_evacuation_fire">차에서 내려 안전 정차 장소로 이동하세요</string>
+    <string name="video_screen_evacuation_accident">차가 움직일 수 있으면 안전 정차 장소로 옮기세요</string>
+    <string name="video_screen_route_no_destination">안전 정차 장소가 설정되지 않아 경로를 요청하지 않았습니다</string>
     <string name="video_screen_dispatch_request">출동 요청</string>
     <string name="video_screen_dispatch_requested">요청됨</string>
     <string name="video_screen_dispatch_done">%1$s에 출동을 요청했습니다.</string>
