@@ -51,6 +51,16 @@ public class VideoPlaceTest {
         assertEquals(1_112, police.distanceMeters);
     }
 
+    /** The optional address reaches the facility, so the navigation app gets it with the route. */
+    @Test
+    public void address_isPassedOn() {
+        FacilityRepository repository = VideoPlace.repositoryOf(Arrays.asList(
+                new VideoPlace(Type.EVACUATION_SITE, "Shelter A", 0.0, 0.01, " Street 1 "),
+                new VideoPlace(Type.POLICE, "Police A", 0.0, 0.02, "  ")));
+        assertEquals("Street 1", repository.nearest(Type.EVACUATION_SITE, 0, 0).address);
+        assertNull(repository.nearest(Type.POLICE, 0, 0).address);
+    }
+
     /** The filming location is not a facility, so it never shows in the lists. */
     @Test
     public void repository_skipsTheFilmingLocation() {

@@ -84,7 +84,7 @@ final class EvacuationStatusOverlay {
             onMap.add(target);
             evacuationName.setText(target.name);
             evacuationDetail.setText(Directions.describe(context, target));
-            // TODO(6단계): NaviHelper. Until then the existing route flow (demo route or Pleos navi).
+            // Video mode: NaviHelper requestRoute (plus the in-app route if chosen in the menu).
             evacuationRoute.setOnClickListener(v -> viewModel.navigateTo(target));
         } else {
             evacuationName.setText(R.string.place_unset);
@@ -101,10 +101,14 @@ final class EvacuationStatusOverlay {
                     .setImageResource(FacilityUi.icon(place.type));
             TextView name = row.findViewById(R.id.status_place_name);
             TextView detail = row.findViewById(R.id.status_place_detail);
-            if (place.facility != null) {
-                onMap.add(place.facility);
-                name.setText(place.facility.name);
-                detail.setText(FacilityUi.detail(context, place.facility));
+            View route = row.findViewById(R.id.status_place_route);
+            Facility facility = place.facility;
+            route.setVisibility(facility == null ? View.GONE : View.VISIBLE);
+            if (facility != null) {
+                onMap.add(facility);
+                name.setText(facility.name);
+                detail.setText(FacilityUi.detail(context, facility));
+                route.setOnClickListener(v -> viewModel.navigateTo(facility));
             } else {
                 name.setText(R.string.place_unset);
                 detail.setText(FacilityUi.label(place.type));
@@ -136,6 +140,20 @@ final class EvacuationStatusOverlay {
     void showDispatches(@Nullable Map<String, Long> dispatched) {
         this.dispatched = dispatched == null ? Collections.emptyMap() : dispatched;
         updateArrivals();
+    }
+
+    /** The navigation app's answer to the route request, or 0 for none. */
+    void showRouteStatus(int message) {
+        TextView view = root.findViewById(R.id.status_route_message);
+        view.setVisibility(message == 0 ? View.GONE : View.VISIBLE);
+        if (message != 0) view.setText(message);
+    }
+
+    /** "다음 안내: 300m 앞 우회전" while the navigation app guides the route, or null. */
+    void showNextTurn(@Nullable String text) {
+        TextView view = root.findViewById(R.id.status_next_turn);
+        view.setVisibility(text == null ? View.GONE : View.VISIBLE);
+        view.setText(text);
     }
 
     void setVideoMode(boolean on) {

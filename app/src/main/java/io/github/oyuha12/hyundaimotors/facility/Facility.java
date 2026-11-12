@@ -1,5 +1,7 @@
 package io.github.oyuha12.hyundaimotors.facility;
 
+import androidx.annotation.Nullable;
+
 public final class Facility {
     public enum Type {
         SAFE_STOP,
@@ -18,6 +20,8 @@ public final class Facility {
     public final double longitude;
     public final int distanceMeters;
     public final int bearingDegrees;
+    /** Street address for the navigation app, or null when unknown (sample places). */
+    @Nullable public final String address;
 
     Facility(
             Type type,
@@ -25,12 +29,14 @@ public final class Facility {
             double latitude,
             double longitude,
             int distanceMeters,
-            int bearingDegrees) {
+            int bearingDegrees,
+            @Nullable String address) {
         this.type = type;
         this.name = name;
         this.latitude = latitude;
         this.longitude = longitude;
         this.distanceMeters = distanceMeters;
         this.bearingDegrees = bearingDegrees;
+        this.address = address;
     }
 }

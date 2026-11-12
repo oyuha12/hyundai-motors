@@ -65,7 +65,7 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- TODO(6단계): send the route through NaviHelper. -->
+            <!-- Sends the route to the Pleos navigation app through NaviHelper. -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/status_evacuation_route"
                 style="@style/Widget.App.Button.Route"
@@ -74,6 +74,26 @@
                 android:layout_marginTop="@dimen/gap"
                 android:text="@string/evacuation_route"
                 app:icon="@drawable/ic_directions" />
+
+            <!-- The navigation app's answer to the route request. -->
+            <TextView
+                android:id="@+id/status_route_message"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/gap"
+                android:textAppearance="@style/TextAppearance.App.Body"
+                android:textColor="@color/primary"
+                android:visibility="gone" />
+
+            <!-- Turn by turn from the navigation app while it guides our route. -->
+            <TextView
+                android:id="@+id/status_next_turn"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/gap_small"
+                android:textAppearance="@style/TextAppearance.App.Label"
+                android:textColor="@color/on_surface_variant"
+                android:visibility="gone" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 

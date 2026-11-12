@@ -17,6 +17,8 @@ public final class VideoPlace {
     @Nullable public final String name;
     @Nullable public final Double latitude;
     @Nullable public final Double longitude;
+    /** Optional street address, sent to the navigation app with the route. */
+    @Nullable public final String address;
     @Nullable private final GeoPoint position;
 
     public VideoPlace(
@@ -24,11 +26,26 @@ public final class VideoPlace {
             @Nullable String name,
             @Nullable Double latitude,
             @Nullable Double longitude) {
+        this(type, name, latitude, longitude, null);
+    }
+
+    public VideoPlace(
+            @Nullable Facility.Type type,
+            @Nullable String name,
+            @Nullable Double latitude,
+            @Nullable Double longitude,
+            @Nullable String address) {
         this.type = type;
-        this.name = name == null || name.trim().isEmpty() ? null : name.trim();
+        this.name = blankToNull(name);
         this.latitude = latitude;
         this.longitude = longitude;
+        this.address = blankToNull(address);
         position = latitude != null && longitude != null ? new GeoPoint(latitude, longitude) : null;
+    }
+
+    @Nullable
+    private static String blankToNull(@Nullable String text) {
+        return text == null || text.trim().isEmpty() ? null : text.trim();
     }
 
     /** Name and both coordinates are filled in. */
@@ -47,7 +64,8 @@ public final class VideoPlace {
         FixedFacilityRepository repository = new FixedFacilityRepository();
         for (VideoPlace place : places) {
             if (place.type != null && place.isSet()) {
-                repository.add(place.type, place.name, place.latitude, place.longitude);
+                repository.add(
+                        place.type, place.name, place.latitude, place.longitude, place.address);
             }
         }
         return repository;

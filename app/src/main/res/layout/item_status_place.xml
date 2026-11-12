@@ -1,78 +1,96 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One responder on the status screen: who, how far, and the arrival countdown. -->
+<!--
+    One responder on the status screen: who, how far, the arrival countdown, and a route to it.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:gravity="center_vertical"
-    android:orientation="horizontal"
+    android:orientation="vertical"
     android:paddingVertical="@dimen/gap">
 
-    <FrameLayout
-        android:layout_width="@dimen/facility_icon_container"
-        android:layout_height="@dimen/facility_icon_container"
-        android:background="@drawable/bg_icon_circle"
-        android:backgroundTint="@color/surface_variant">
-
-        <ImageView
-            android:id="@+id/status_place_icon"
-            android:layout_width="@dimen/icon_size"
-            android:layout_height="@dimen/icon_size"
-            android:layout_gravity="center"
-            android:importantForAccessibility="no"
-            app:tint="@color/on_surface" />
-    </FrameLayout>
-
     <LinearLayout
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/gap_large"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
-        <TextView
-            android:id="@+id/status_place_name"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textAppearance="@style/TextAppearance.App.BodyStrong" />
+        <FrameLayout
+            android:layout_width="@dimen/facility_icon_container"
+            android:layout_height="@dimen/facility_icon_container"
+            android:background="@drawable/bg_icon_circle"
+            android:backgroundTint="@color/surface_variant">
 
-        <TextView
-            android:id="@+id/status_place_detail"
-            android:layout_width="match_parent"
+            <ImageView
+                android:id="@+id/status_place_icon"
+                android:layout_width="@dimen/icon_size"
+                android:layout_height="@dimen/icon_size"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                app:tint="@color/on_surface" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textAppearance="@style/TextAppearance.App.BodySecondary" />
+            android:layout_marginStart="@dimen/gap_large"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/status_place_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textAppearance="@style/TextAppearance.App.BodyStrong" />
+
+            <TextView
+                android:id="@+id/status_place_detail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textAppearance="@style/TextAppearance.App.BodySecondary" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/gap"
+            android:background="@drawable/bg_chip"
+            android:backgroundTint="@color/primary_container"
+            android:gravity="end"
+            android:minWidth="176dp"
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingVertical="12dp">
+
+            <TextView
+                android:id="@+id/status_place_eta_caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:textAppearance="@style/TextAppearance.App.LabelSmall"
+                android:textColor="@color/on_primary_container" />
+
+            <TextView
+                android:id="@+id/status_place_eta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:textAppearance="@style/TextAppearance.App.TitleLarge"
+                android:textColor="@color/on_primary_container" />
+        </LinearLayout>
     </LinearLayout>
 
-    <LinearLayout
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/status_place_route"
+        style="@style/Widget.App.Button.Tonal"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/gap"
-        android:background="@drawable/bg_chip"
-        android:backgroundTint="@color/primary_container"
-        android:gravity="end"
-        android:minWidth="176dp"
-        android:orientation="vertical"
-        android:paddingHorizontal="20dp"
-        android:paddingVertical="12dp">
-
-        <TextView
-            android:id="@+id/status_place_eta_caption"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:maxLines="1"
-            android:textAppearance="@style/TextAppearance.App.LabelSmall"
-            android:textColor="@color/on_primary_container" />
-
-        <TextView
-            android:id="@+id/status_place_eta"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:maxLines="1"
-            android:textAppearance="@style/TextAppearance.App.TitleLarge"
-            android:textColor="@color/on_primary_container" />
-    </LinearLayout>
+        android:layout_gravity="end"
+        android:layout_marginTop="@dimen/gap_small"
+        android:text="@string/route_button"
+        app:icon="@drawable/ic_directions" />
 </LinearLayout>

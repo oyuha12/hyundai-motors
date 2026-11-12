@@ -157,7 +157,7 @@ public final class ResponseMapView extends View {
 
     /** 112 blue, 119 red, evacuation green: the Pleos informative colors. */
     @ColorRes
-    private static int markerColor(Facility.Type type) {
+    static int markerColor(Facility.Type type) {
         switch (type) {
             case POLICE:
                 return R.color.primary;

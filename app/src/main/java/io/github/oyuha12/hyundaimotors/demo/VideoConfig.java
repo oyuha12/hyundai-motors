@@ -25,6 +25,7 @@ public final class VideoConfig {
     // ---- Real places for the video -------------------------------------------------------------
     //
     // TODO(영상): fill in each name, latitude and longitude from the team. Never make them up.
+    // The address is optional: it goes to the navigation app with the route.
     // Leave a value null until it is known: screens then show "장소 미설정" (or "위치 이름 미설정")
     // and leave the place out of distances, countdowns and the mini map. Once a place has a name
     // and both coordinates it shows everywhere with no other change.
@@ -44,26 +45,30 @@ public final class VideoConfig {
             Facility.Type.EVACUATION_SITE,
             null, // TODO(영상): 대피 장소 이름
             null, // TODO(영상): 위도
-            null); // TODO(영상): 경도
+            null, // TODO(영상): 경도
+            null); // TODO(영상): 주소 (선택)
 
     public static final VideoPlace POLICE = new VideoPlace(
             Facility.Type.POLICE,
             null, // TODO(영상): 경찰서 이름
             null, // TODO(영상): 위도
-            null); // TODO(영상): 경도
+            null, // TODO(영상): 경도
+            null); // TODO(영상): 주소 (선택)
 
     public static final VideoPlace FIRE_STATION = new VideoPlace(
             Facility.Type.FIRE_STATION,
             null, // TODO(영상): 소방서 이름
             null, // TODO(영상): 위도
-            null); // TODO(영상): 경도
+            null, // TODO(영상): 경도
+            null); // TODO(영상): 주소 (선택)
 
     /** Optional. Set SHOW_HOSPITAL to false to leave hospitals out of the video. */
     public static final VideoPlace HOSPITAL = new VideoPlace(
             Facility.Type.HOSPITAL,
             null, // TODO(영상): 병원 이름
             null, // TODO(영상): 위도
-            null); // TODO(영상): 경도
+            null, // TODO(영상): 경도
+            null); // TODO(영상): 주소 (선택)
 
     public static final boolean SHOW_HOSPITAL = true;
 
@@ -86,6 +91,15 @@ public final class VideoConfig {
      * while a report is awaited. Off unless turned on in the menu.
      */
     public static final boolean DEFAULT_STAGED_VOICE_REPORT = false;
+
+    /** When to send the evacuation route to the navigation app without a tap. */
+    public static final AutoRoute DEFAULT_AUTO_ROUTE = AutoRoute.OFF;
+
+    /**
+     * Also show the in-app route screen over the navigation request, for an emulator whose
+     * navigation app cannot draw maps. Off unless turned on in the menu.
+     */
+    public static final boolean DEFAULT_FALLBACK_ROUTE = false;
 
     /** Above this speed the car shows as driving in video mode. */
     public static final float DRIVING_SPEED_KPH = 1f;

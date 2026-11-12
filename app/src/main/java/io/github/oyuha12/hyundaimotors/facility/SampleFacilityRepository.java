@@ -45,7 +45,8 @@ public final class SampleFacilityRepository implements FacilityRepository {
                     latitude + distance * Math.cos(radians) / METERS_PER_DEGREE_LATITUDE,
                     longitude + distance * Math.sin(radians) / metersPerDegreeLongitude,
                     distance,
-                    bearing));
+                    bearing,
+                    null));
         }
         facilities.sort(Comparator.comparingInt(facility -> facility.distanceMeters));
         return facilities;

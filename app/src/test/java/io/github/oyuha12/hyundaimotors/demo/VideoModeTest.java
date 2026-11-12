@@ -78,6 +78,34 @@ public class VideoModeTest {
     }
 
     @Test
+    public void autoRoute_onlyAtTheChosenMomentInVideoMode() {
+        assertTrue(VideoMode.autoRoutesAt(true, AutoRoute.AFTER_REPORT, AutoRoute.AFTER_REPORT));
+        assertFalse(VideoMode.autoRoutesAt(true, AutoRoute.AFTER_REPORT, AutoRoute.ON_CONFIRM));
+        assertTrue(VideoMode.autoRoutesAt(true, AutoRoute.ON_CONFIRM, AutoRoute.ON_CONFIRM));
+        assertFalse(VideoMode.autoRoutesAt(true, AutoRoute.OFF, AutoRoute.OFF));
+        assertFalse(VideoMode.autoRoutesAt(false, AutoRoute.AFTER_REPORT, AutoRoute.AFTER_REPORT));
+        assertEquals(AutoRoute.OFF, VideoConfig.DEFAULT_AUTO_ROUTE);
+    }
+
+    @Test
+    public void autoRoute_storedChoice() {
+        for (AutoRoute moment : AutoRoute.values()) {
+            assertEquals(moment, AutoRoute.fromStored(moment.ordinal()));
+        }
+        assertEquals(AutoRoute.OFF, AutoRoute.fromStored(-1));
+        assertEquals(AutoRoute.OFF, AutoRoute.fromStored(99));
+    }
+
+    /** The in-app route screen joins the navigation request only in video mode, when chosen. */
+    @Test
+    public void fallbackRoute_offByDefault() {
+        assertTrue(VideoMode.showsFallbackRoute(true, true));
+        assertFalse(VideoMode.showsFallbackRoute(true, false));
+        assertFalse(VideoMode.showsFallbackRoute(false, true));
+        assertFalse(VideoConfig.DEFAULT_FALLBACK_ROUTE);
+    }
+
+    @Test
     public void menuScenarios_areTheVideoOnes() {
         assertEquals(Scenario.VIDEO_ACCELERATION, VideoConfig.SCENARIO_ACCELERATION);
         assertEquals(Scenario.VIDEO_FIRE, VideoConfig.SCENARIO_FIRE);

@@ -222,6 +222,13 @@ final class EmergencyOverlay {
         if (message != 0) routeStatus.setText(message);
     }
 
+    /** "다음 안내: 300m 앞 우회전" while the navigation app guides the route, or null. */
+    void showNextTurn(@Nullable String text) {
+        TextView view = root.findViewById(R.id.emergency_next_turn);
+        view.setVisibility(text == null ? View.GONE : View.VISIBLE);
+        view.setText(text);
+    }
+
     /** A mock dispatch request to one facility. SOS reports show in the receipt instead. */
     void showReport(@Nullable MockEmergencyReporter.Report report) {
         boolean dispatch = report != null && report.facilityName != null;
