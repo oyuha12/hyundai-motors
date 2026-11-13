@@ -62,6 +62,16 @@ public final class VideoMode {
         return videoMode && fallbackSetting;
     }
 
+    /**
+     * Whether the in-app route may speak now in video mode: not while the situation guidance is
+     * being read, not while the report offer, the reply to it or the report announcement has the
+     * voice, and not over a sentence still being read. A call held back is tried again.
+     */
+    public static boolean routeVoiceFree(
+            boolean guidanceRunning, boolean reportBusy, boolean speaking) {
+        return !guidanceRunning && !reportBusy && !speaking;
+    }
+
     /** A stored lead-in, or the default when it is not one of the menu's choices. */
     public static int leadInSeconds(int stored) {
         return VideoConfig.LEAD_IN_SECONDS.contains(stored)

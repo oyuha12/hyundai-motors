@@ -25,4 +25,6 @@
     <dimen name="popup_side_padding">32dp</dimen>
     <dimen name="popup_padding">40dp</dimen>
     <dimen name="popup_button_height">104dp</dimen>
+    <!-- Video mode route screen: the turn arrow box, larger so it reads in the video. -->
+    <dimen name="route_video_turn_icon">112dp</dimen>
 </resources>

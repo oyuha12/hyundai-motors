@@ -36,6 +36,17 @@
     <!-- Pleos informative_negative, darkened to 4.5:1 on white for text and icons on surfaces. -->
     <color name="negative">#D62E0A</color>
 
+    <!--
+        Video mode route screen, first-person view: white roads between darker blocks so the
+        streets read at a glance, a blue route with white edges, and a pale sky at the horizon.
+    -->
+    <color name="route_road">#FFFFFF</color>
+    <color name="route_block">#D3D6DE</color>
+    <color name="route_lane_mark">#A9ADB7</color>
+    <color name="route_travelled">#B4B8C1</color>
+    <color name="route_sky">#D6E4F7</color>
+    <color name="route_car_shadow">#40000000</color>
+
     <!-- Popup dim -->
     <color name="dim">#99000000</color>
 

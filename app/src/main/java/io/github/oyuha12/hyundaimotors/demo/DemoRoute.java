@@ -121,6 +121,31 @@ public final class DemoRoute {
         return 0f;
     }
 
+    /**
+     * Direction for a view that follows the car: the leg's direction, turning smoothly from one
+     * leg to the next over {@code blendMeters} before and after each corner, so the view does not
+     * jump a quarter turn at once.
+     */
+    public float smoothHeadingAt(float meters, float blendMeters) {
+        float along = Math.max(0f, Math.min(meters, lengthMeters()));
+        for (int i = 1; i < points.size() - 1; i++) {
+            float corner = cumulative[i];
+            if (Math.abs(along - corner) >= blendMeters) continue;
+            float before = legHeading(i - 1);
+            float after = legHeading(i);
+            float t = (along - (corner - blendMeters)) / (2f * blendMeters);
+            float eased = t * t * (3f - 2f * t);
+            float turn = ((after - before + 540f) % 360f) - 180f;
+            return (before + turn * eased + 360f) % 360f;
+        }
+        return headingAt(along);
+    }
+
+    private float legHeading(int leg) {
+        Point a = points.get(leg), b = points.get(leg + 1);
+        return (float) ((Math.toDegrees(Math.atan2(b.x - a.x, b.y - a.y)) + 360.0) % 360.0);
+    }
+
     /** The next turn still ahead, or null if only the destination remains. */
     @Nullable
     public Maneuver nextManeuver(float meters) {

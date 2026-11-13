@@ -34,6 +34,7 @@ import io.github.oyuha12.hyundaimotors.demo.VideoWording;
 import io.github.oyuha12.hyundaimotors.diagnosis.EmergencyType;
 import io.github.oyuha12.hyundaimotors.facility.Facility;
 import io.github.oyuha12.hyundaimotors.facility.MiniMapScale;
+import io.github.oyuha12.hyundaimotors.guidance.GuidanceSpeaker;
 import io.github.oyuha12.hyundaimotors.telemetry.SimulatedTelemetrySource.Scenario;
 import io.github.oyuha12.hyundaimotors.telemetry.VehicleSnapshot;
 import java.util.ArrayList;
@@ -52,6 +53,17 @@ public class MainActivity extends AppCompatActivity {
         // Only for the fallback recognizer when the Pleos one is unavailable.
         "android.permission.RECORD_AUDIO",
     };
+    /**
+     * Video mode also asks for the Pleos TTS permission: the Pleos voice does not start without
+     * it. Nothing is shown when the system has already granted it at install.
+     */
+    private static final String[] VIDEO_PERMISSIONS = {
+        "pleos.car.permission.TTS_SERVICE",
+    };
+    /** The video menu checks the voice engine again after this, once the test sentence began. */
+    private static final long VOICE_CHECK_MILLIS = 4_000L;
+    /** A permission request is open; another one would be dropped. */
+    private boolean permissionRequestOpen;
 
     private MainViewModel viewModel;
     private EmergencyOverlay overlay;
@@ -208,6 +220,17 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
+        // Voice test: reads a sentence and says which engine read it. The menu stays open.
+        TextView voiceEngine = content.findViewById(R.id.video_voice_engine);
+        voiceEngine.setText(voiceEngineLabel(viewModel.getVoiceEngine()));
+        content.findViewById(R.id.video_voice_test).setOnClickListener(view -> {
+            viewModel.testVoice();
+            voiceEngine.setText(voiceEngineLabel(viewModel.getVoiceEngine()));
+            voiceEngine.postDelayed(
+                    () -> voiceEngine.setText(voiceEngineLabel(viewModel.getVoiceEngine())),
+                    VOICE_CHECK_MILLIS);
+        });
+
         AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.video_menu_title)
                 .setView(content)
@@ -231,6 +254,8 @@ public class MainActivity extends AppCompatActivity {
 
     /** Video mode hides test-only controls and wording. Off, everything is as before. */
     private void renderVideoMode(boolean on) {
+        // Turning video mode on asks for the TTS permission, unless a request is already open.
+        if (on && !permissionRequestOpen) requestMissingPermissions();
         toggleDriving.setVisibility(on ? View.GONE : View.VISIBLE);
         videoModeSwitch.setChecked(on);
         NavigationBarView navigation = findViewById(R.id.navigation);
@@ -350,15 +375,21 @@ public class MainActivity extends AppCompatActivity {
 
     private void requestMissingPermissions() {
         List<String> missing = new ArrayList<>();
-        for (String permission : RUNTIME_PERMISSIONS) {
+        addMissing(missing, RUNTIME_PERMISSIONS);
+        if (viewModel.isVideoMode()) addMissing(missing, VIDEO_PERMISSIONS);
+        if (!missing.isEmpty()) {
+            permissionRequestOpen = true;
+            ActivityCompat.requestPermissions(
+                    this, missing.toArray(new String[0]), PERMISSION_REQUEST);
+        }
+    }
+
+    private void addMissing(List<String> missing, String[] permissions) {
+        for (String permission : permissions) {
             if (ContextCompat.checkSelfPermission(this, permission)
                     != PackageManager.PERMISSION_GRANTED) {
                 missing.add(permission);
             }
-        }
-        if (!missing.isEmpty()) {
-            ActivityCompat.requestPermissions(
-                    this, missing.toArray(new String[0]), PERMISSION_REQUEST);
         }
     }
 
@@ -366,7 +397,10 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(
             int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_REQUEST) viewModel.onPermissionsChanged();
+        if (requestCode == PERMISSION_REQUEST) {
+            permissionRequestOpen = false;
+            viewModel.onPermissionsChanged();
+        }
     }
 
     private boolean onDestinationSelected(MenuItem item) {
@@ -464,6 +498,23 @@ public class MainActivity extends AppCompatActivity {
         String text = turn == null ? null : Directions.nextTurn(this, turn);
         overlay.showNextTurn(text);
         statusOverlay.showNextTurn(text);
+    }
+
+    @StringRes
+    private static int voiceEngineLabel(GuidanceSpeaker.Engine engine) {
+        switch (engine) {
+            case PLEOS:
+                return R.string.voice_engine_pleos;
+            case ANDROID:
+                return R.string.voice_engine_android;
+            case ANDROID_NO_KOREAN:
+                return R.string.voice_engine_android_no_korean;
+            case STARTING:
+                return R.string.voice_engine_starting;
+            case NONE:
+            default:
+                return R.string.voice_engine_none;
+        }
     }
 
     @StringRes

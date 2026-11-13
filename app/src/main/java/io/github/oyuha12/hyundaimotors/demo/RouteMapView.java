@@ -3,9 +3,11 @@ package io.github.oyuha12.hyundaimotors.demo;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.DashPathEffect;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.view.View;
@@ -23,6 +25,9 @@ import java.util.List;
  * Draws a {@link DemoRoute} on a made-up city grid: blocks between roads, wider main roads with
  * lane marks, the route, the destination, pins for nearby police and fire stations, and the
  * car's position and direction. Map tiles are not needed, so it works on any emulator.
+ *
+ * <p>Video mode draws the same city as a car navigation's driving view instead: see
+ * {@link #setFirstPerson} and {@link FirstPersonCamera}.
  */
 public final class RouteMapView extends View {
     private static final float GRID_METERS = 100f;
@@ -61,6 +66,38 @@ public final class RouteMapView extends View {
     private final Path path = new Path();
     private final float density;
 
+    // First-person view, video mode only. Sizes on the ground are meters.
+    /** The view turns from one leg to the next over this many meters before and after a corner. */
+    private static final float VIEW_TURN_METERS = 35f;
+    /** The car arrow turns faster than the view, so it leads into the turn. */
+    private static final float ARROW_TURN_METERS = 12f;
+    private static final float SIDE_ROAD_METERS = 10f;
+    private static final float MAIN_ROAD_METERS = 18f;
+    /** Every leg of the route runs on a road of its own this wide. */
+    private static final float ROUTE_ROAD_METERS = 16f;
+    private static final float ROUTE_METERS = 8f;
+    private static final float ROUTE_CASING_METERS = 12f;
+    private static final float DASH_METERS = 8f;
+    private static final float DASH_WIDTH_METERS = 0.8f;
+    private final FirstPersonCamera camera = new FirstPersonCamera();
+    private final Paint groundRoad = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint groundBlock = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint groundMark = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint groundCasing = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint groundRoute = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint groundTravelled = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint turnArrow = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint sky = new Paint();
+    private final Paint carShadow = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint carFill = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint carEdge = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final int skyColor;
+    private final Path ground = new Path();
+    private final float[] corners = new float[2 * FirstPersonCamera.MAX_CORNERS];
+    private final float[] screen = new float[2 * (FirstPersonCamera.MAX_CORNERS + 2)];
+    private final float[] point = new float[2];
+    private boolean firstPerson;
+
     @Nullable private DemoRoute route;
     private float progressMeters;
     private List<Pin> pins = Collections.emptyList();
@@ -95,6 +132,30 @@ public final class RouteMapView extends View {
         carOutline.setStyle(Paint.Style.STROKE);
         carOutline.setStrokeWidth(3 * density);
         carOutline.setStrokeJoin(Paint.Join.ROUND);
+
+        groundRoad.setColor(ContextCompat.getColor(context, R.color.route_road));
+        groundBlock.setColor(ContextCompat.getColor(context, R.color.route_block));
+        groundMark.setColor(ContextCompat.getColor(context, R.color.route_lane_mark));
+        groundCasing.setColor(ContextCompat.getColor(context, R.color.on_primary));
+        groundRoute.setColor(ContextCompat.getColor(context, R.color.primary));
+        groundTravelled.setColor(ContextCompat.getColor(context, R.color.route_travelled));
+        turnArrow.setColor(ContextCompat.getColor(context, R.color.on_primary));
+        skyColor = ContextCompat.getColor(context, R.color.route_sky);
+        carShadow.setColor(ContextCompat.getColor(context, R.color.route_car_shadow));
+        carFill.setColor(ContextCompat.getColor(context, R.color.on_primary));
+        carEdge.setColor(ContextCompat.getColor(context, R.color.primary));
+        carEdge.setStyle(Paint.Style.STROKE);
+        carEdge.setStrokeWidth(5 * density);
+        carEdge.setStrokeJoin(Paint.Join.ROUND);
+    }
+
+    /**
+     * Video mode: a car navigation's driving view, turned so the direction of travel is up and
+     * tilted toward the horizon, following the car. Off: the whole route from above, north up.
+     */
+    public void setFirstPerson(boolean on) {
+        firstPerson = on;
+        invalidate();
     }
 
     public void setRoute(DemoRoute route) {
@@ -116,6 +177,10 @@ public final class RouteMapView extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        if (firstPerson && route != null) {
+            drawFirstPerson(canvas, route);
+            return;
+        }
         canvas.drawRect(0, 0, getWidth(), getHeight(), road);
         if (route == null) return;
 
@@ -162,7 +227,9 @@ public final class RouteMapView extends View {
         canvas.drawCircle(ex, ey, 18 * density, destinationRing);
         canvas.drawCircle(ex, ey, 13 * density, destination);
 
-        for (Pin pin : pins) drawPin(canvas, pin, originX + pin.x * scale, originY - pin.y * scale);
+        for (Pin pin : pins) {
+            drawPin(canvas, pin.color, pin.icon, originX + pin.x * scale, originY - pin.y * scale, 1f);
+        }
 
         DemoRoute.Point now = route.positionAt(progressMeters);
         drawCar(canvas, originX + now.x * scale, originY - now.y * scale, route.headingAt(progressMeters));
@@ -225,11 +292,15 @@ public final class RouteMapView extends View {
         return Math.floorMod(index, MAIN_ROAD_EVERY) == 0;
     }
 
-    /** A map pin: a colored head with the place's icon, pointing at the place. */
-    private void drawPin(Canvas canvas, Pin pin, float x, float y) {
-        float radius = 16 * density;
-        float headY = y - radius - 10 * density;
-        pinPaint.setColor(ContextCompat.getColor(getContext(), pin.color));
+    /**
+     * A map pin: a colored head with the place's icon, pointing at the place. {@code icon} 0
+     * draws a white dot instead.
+     */
+    private void drawPin(Canvas canvas, @ColorRes int color, @DrawableRes int iconRes,
+            float x, float y, float size) {
+        float radius = 16 * density * size;
+        float headY = y - radius - 10 * density * size;
+        pinPaint.setColor(ContextCompat.getColor(getContext(), color));
         Path pointer = new Path();
         pointer.moveTo(x - radius * 0.6f, headY + radius * 0.6f);
         pointer.lineTo(x, y);
@@ -237,11 +308,16 @@ public final class RouteMapView extends View {
         pointer.close();
         canvas.drawPath(pointer, pinPaint);
         canvas.drawCircle(x, headY, radius, pinPaint);
-        Drawable icon = AppCompatResources.getDrawable(getContext(), pin.icon);
+        if (iconRes == 0) {
+            pinPaint.setColor(pinIconTint);
+            canvas.drawCircle(x, headY, radius * 0.4f, pinPaint);
+            return;
+        }
+        Drawable icon = AppCompatResources.getDrawable(getContext(), iconRes);
         if (icon == null) return;
         icon = icon.mutate();
         icon.setTint(pinIconTint);
-        int half = Math.round(10 * density);
+        int half = Math.round(10 * density * size);
         icon.setBounds(Math.round(x) - half, Math.round(headY) - half,
                 Math.round(x) + half, Math.round(headY) + half);
         icon.draw(canvas);
@@ -278,5 +354,253 @@ public final class RouteMapView extends View {
         canvas.drawPath(arrow, car);
         canvas.drawPath(arrow, carOutline);
         canvas.restore();
+    }
+
+    // ---- First-person view (video mode) --------------------------------------------------------
+
+    private void drawFirstPerson(Canvas canvas, DemoRoute route) {
+        float width = getWidth(), height = getHeight();
+        camera.setView(width, height);
+        DemoRoute.Point now = route.positionAt(progressMeters);
+        float viewHeading = route.smoothHeadingAt(progressMeters, VIEW_TURN_METERS);
+        camera.follow(now.x, now.y, viewHeading);
+
+        canvas.drawRect(0, 0, width, height, groundRoad);
+        drawBlocks(canvas, now);
+        drawRouteRoads(canvas, route, now);
+        drawGroundRoute(canvas, route);
+        drawTurnArrow(canvas, route);
+        drawSky(canvas, width);
+        drawStandingMarks(canvas, route);
+
+        // The car stays put near the bottom; the ground turns and slides under it.
+        camera.project(now.x, now.y, point, 0);
+        float arrowTurn = route.smoothHeadingAt(progressMeters, ARROW_TURN_METERS) - viewHeading;
+        drawFirstPersonCar(canvas, point[0], point[1], arrowTurn);
+    }
+
+    /** City blocks, with every fourth road a main road with a dashed center line. */
+    private void drawBlocks(Canvas canvas, DemoRoute.Point car) {
+        float reach = FirstPersonCamera.FAR_METERS + GRID_METERS;
+        int firstColumn = (int) Math.floor((car.x - reach) / GRID_METERS);
+        int lastColumn = (int) Math.ceil((car.x + reach) / GRID_METERS);
+        int firstRow = (int) Math.floor((car.y - reach) / GRID_METERS);
+        int lastRow = (int) Math.ceil((car.y + reach) / GRID_METERS);
+
+        ground.reset();
+        for (int k = firstColumn; k < lastColumn; k++) {
+            float left = k * GRID_METERS + roadHalf(k);
+            float right = (k + 1) * GRID_METERS - roadHalf(k + 1);
+            for (int m = firstRow; m < lastRow; m++) {
+                if (!camera.mayBeVisible((k + 0.5f) * GRID_METERS, (m + 0.5f) * GRID_METERS, GRID_METERS)) {
+                    continue;
+                }
+                float bottom = m * GRID_METERS + roadHalf(m);
+                float top = (m + 1) * GRID_METERS - roadHalf(m + 1);
+                addRect(left, bottom, right, top);
+            }
+        }
+        canvas.drawPath(ground, groundBlock);
+
+        ground.reset();
+        float half = DASH_WIDTH_METERS / 2f;
+        for (int k = firstColumn; k <= lastColumn; k++) {
+            if (!isMainRoad(k)) continue;
+            float x = k * GRID_METERS;
+            for (float y = firstRow * GRID_METERS; y < lastRow * GRID_METERS; y += 2 * DASH_METERS) {
+                if (camera.mayBeVisible(x, y, DASH_METERS)) addRect(x - half, y, x + half, y + DASH_METERS);
+            }
+        }
+        for (int m = firstRow; m <= lastRow; m++) {
+            if (!isMainRoad(m)) continue;
+            float y = m * GRID_METERS;
+            for (float x = firstColumn * GRID_METERS; x < lastColumn * GRID_METERS; x += 2 * DASH_METERS) {
+                if (camera.mayBeVisible(x, y, DASH_METERS)) addRect(x, y - half, x + DASH_METERS, y + half);
+            }
+        }
+        canvas.drawPath(ground, groundMark);
+    }
+
+    private static float roadHalf(int index) {
+        return (isMainRoad(index) ? MAIN_ROAD_METERS : SIDE_ROAD_METERS) / 2f;
+    }
+
+    /** Each leg runs on a road of its own, so the route never crosses a block. */
+    private void drawRouteRoads(Canvas canvas, DemoRoute route, DemoRoute.Point car) {
+        float reach = FirstPersonCamera.FAR_METERS + GRID_METERS;
+        float half = ROUTE_ROAD_METERS / 2f;
+        ground.reset();
+        List<DemoRoute.Point> points = route.points();
+        for (int i = 1; i < points.size(); i++) {
+            DemoRoute.Point a = points.get(i - 1), b = points.get(i);
+            if (a.x == b.x) {
+                addRect(a.x - half, car.y - reach, a.x + half, car.y + reach);
+            } else if (a.y == b.y) {
+                addRect(car.x - reach, a.y - half, car.x + reach, a.y + half);
+            }
+        }
+        canvas.drawPath(ground, groundRoad);
+    }
+
+    /** The route on the road: white edges, gray behind the car, blue ahead. */
+    private void drawGroundRoute(Canvas canvas, DemoRoute route) {
+        float length = route.lengthMeters();
+        drawRouteBand(canvas, route, 0f, length, ROUTE_CASING_METERS, groundCasing);
+        if (progressMeters > 0f) {
+            drawRouteBand(canvas, route, 0f, progressMeters, ROUTE_METERS, groundTravelled);
+        }
+        drawRouteBand(canvas, route, progressMeters, length, ROUTE_METERS, groundRoute);
+    }
+
+    /** The route from one distance to another as a band on the ground, square at the corners. */
+    private void drawRouteBand(Canvas canvas, DemoRoute route, float from, float to, float widthMeters, Paint paint) {
+        float half = widthMeters / 2f;
+        ground.reset();
+        List<DemoRoute.Point> points = route.points();
+        float walked = 0f;
+        for (int i = 1; i < points.size(); i++) {
+            DemoRoute.Point a = points.get(i - 1), b = points.get(i);
+            float leg = (float) Math.hypot(b.x - a.x, b.y - a.y);
+            float start = Math.max(from, walked), end = Math.min(to, walked + leg);
+            if (end > start && leg > 0f) {
+                float dx = (b.x - a.x) / leg, dy = (b.y - a.y) / leg;
+                // Corners overlap by half the width so the band has no notch there.
+                float s = start - walked - (start > walked || i == 1 ? 0f : half);
+                float e = end - walked + (end < walked + leg || i == points.size() - 1 ? 0f : half);
+                addBand(a.x + dx * s, a.y + dy * s, a.x + dx * e, a.y + dy * e, half);
+            }
+            walked += leg;
+        }
+        canvas.drawPath(ground, paint);
+    }
+
+    /** A white arrow painted on the road through the next corner, like a navigation's turn arrow. */
+    private void drawTurnArrow(Canvas canvas, DemoRoute route) {
+        DemoRoute.Maneuver next = route.nextManeuver(progressMeters);
+        if (next == null || next.atMeters - progressMeters > FirstPersonCamera.FAR_METERS) return;
+        DemoRoute.Point corner = route.positionAt(next.atMeters);
+        DemoRoute.Point before = route.positionAt(next.atMeters - 1f);
+        DemoRoute.Point after = route.positionAt(next.atMeters + 1f);
+        float inX = corner.x - before.x, inY = corner.y - before.y;
+        float outX = after.x - corner.x, outY = after.y - corner.y;
+        // Meters: the shaft's half width, its length before and after the corner, the head.
+        float shaft = 2f, tail = 28f, reach = 14f, head = 10f, headHalf = 5.5f;
+        ground.reset();
+        addBand(corner.x - inX * tail, corner.y - inY * tail,
+                corner.x + inX * shaft, corner.y + inY * shaft, shaft);
+        addBand(corner.x, corner.y, corner.x + outX * reach, corner.y + outY * reach, shaft);
+        float baseX = corner.x + outX * reach, baseY = corner.y + outY * reach;
+        // Across the outgoing direction: (outY, -outX).
+        corners[0] = baseX + outY * headHalf;
+        corners[1] = baseY - outX * headHalf;
+        corners[2] = baseX + outX * head;
+        corners[3] = baseY + outY * head;
+        corners[4] = baseX - outY * headHalf;
+        corners[5] = baseY + outX * headHalf;
+        addPolygon(3);
+        canvas.drawPath(ground, turnArrow);
+    }
+
+    /**
+     * Sky down to the far edge of the drawn ground, then fading into the ground, so the place
+     * where the drawing stops does not show.
+     */
+    private void drawSky(Canvas canvas, float width) {
+        float far = camera.screenYAhead(FirstPersonCamera.FAR_METERS);
+        float fadeEnd = camera.screenYAhead(FirstPersonCamera.FAR_METERS / 2f);
+        sky.setShader(new LinearGradient(0, far, 0, fadeEnd,
+                skyColor, skyColor & 0x00FFFFFF, Shader.TileMode.CLAMP));
+        canvas.drawRect(0, 0, width, fadeEnd, sky);
+    }
+
+    /** The destination and the pins, standing up, smaller with distance, the farthest first. */
+    private void drawStandingMarks(Canvas canvas, DemoRoute route) {
+        List<float[]> marks = new ArrayList<>();
+        DemoRoute.Point end = route.positionAt(route.lengthMeters());
+        marks.add(new float[] {end.x, end.y, -1});
+        for (int i = 0; i < pins.size(); i++) marks.add(new float[] {pins.get(i).x, pins.get(i).y, i});
+        Collections.sort(marks, (a, b) -> Float.compare(camera.ahead(b[0], b[1]), camera.ahead(a[0], a[1])));
+        float atCar = camera.pixelsPerMeter(0f);
+        for (float[] mark : marks) {
+            float forward = camera.ahead(mark[0], mark[1]);
+            if (forward < 0f || forward > FirstPersonCamera.FAR_METERS) continue;
+            camera.project(mark[0], mark[1], point, 0);
+            if (point[0] < -48 * density || point[0] > getWidth() + 48 * density) continue;
+            float size = Math.max(0.7f, Math.min(1.3f, 1.3f * camera.pixelsPerMeter(forward) / atCar));
+            if (mark[2] < 0) {
+                drawPin(canvas, R.color.negative, 0, point[0], point[1], size * 1.4f);
+            } else {
+                Pin pin = pins.get((int) mark[2]);
+                drawPin(canvas, pin.color, pin.icon, point[0], point[1], size);
+            }
+        }
+    }
+
+    /** The car: a large white arrow with a blue edge and a shadow, pointing up the screen. */
+    private void drawFirstPersonCar(Canvas canvas, float x, float y, float turnDegrees) {
+        float size = 34 * density;
+        canvas.drawOval(x - size, y - size * 0.15f, x + size, y + size * 1.05f, carShadow);
+        canvas.save();
+        canvas.rotate(turnDegrees, x, y);
+        Path arrow = new Path();
+        arrow.moveTo(x, y - size);
+        arrow.lineTo(x + size * 0.75f, y + size * 0.8f);
+        arrow.lineTo(x, y + size * 0.35f);
+        arrow.lineTo(x - size * 0.75f, y + size * 0.8f);
+        arrow.close();
+        canvas.drawPath(arrow, carEdge);
+        canvas.drawPath(arrow, carFill);
+        canvas.restore();
+    }
+
+    /** Adds a ground rectangle, given by its west, south, east and north edges. */
+    private void addRect(float west, float south, float east, float north) {
+        corners[0] = west;
+        corners[1] = south;
+        corners[2] = east;
+        corners[3] = south;
+        corners[4] = east;
+        corners[5] = north;
+        corners[6] = west;
+        corners[7] = north;
+        addPolygon(4);
+    }
+
+    /** Adds a band of the given half width along the ground from (ax, ay) to (bx, by). */
+    private void addBand(float ax, float ay, float bx, float by, float half) {
+        float length = (float) Math.hypot(bx - ax, by - ay);
+        if (length == 0f) return;
+        float sideX = (by - ay) / length * half, sideY = -(bx - ax) / length * half;
+        corners[0] = ax + sideX;
+        corners[1] = ay + sideY;
+        corners[2] = bx + sideX;
+        corners[3] = by + sideY;
+        corners[4] = bx - sideX;
+        corners[5] = by - sideY;
+        corners[6] = ax - sideX;
+        corners[7] = ay - sideY;
+        addPolygon(4);
+    }
+
+    /**
+     * Adds the first {@code count} points of {@link #corners}, clipped and projected. Every
+     * polygon goes in clockwise on screen, so overlapping ones fill as one shape and leave no
+     * holes under the path's winding rule.
+     */
+    private void addPolygon(int count) {
+        int n = camera.clipAndProject(corners, count, screen);
+        if (n < 3) return;
+        float area = 0f;
+        for (int i = 0; i < n; i++) {
+            int j = (i + 1) % n;
+            area += screen[2 * i] * screen[2 * j + 1] - screen[2 * j] * screen[2 * i + 1];
+        }
+        boolean reverse = area < 0f;
+        for (int k = 0; k < n; k++) {
+            int i = reverse ? n - 1 - k : k;
+            if (k == 0) ground.moveTo(screen[2 * i], screen[2 * i + 1]);
+            else ground.lineTo(screen[2 * i], screen[2 * i + 1]);
+        }
+        ground.close();
     }
 }

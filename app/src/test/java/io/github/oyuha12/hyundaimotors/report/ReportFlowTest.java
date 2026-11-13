@@ -200,4 +200,24 @@ public class ReportFlowTest {
                 "step 1", "step 2", "step 3", "wait", "stopped", "step 4",
                 "prompt", "listen", "report VOICE", "status"), all);
     }
+
+    /** The route voice waits while the report part has the voice. */
+    @Test
+    public void busy_fromTheOfferToTheAnnouncement() {
+        assertFalse(flow.isBusy());
+        flow.onGuidanceFinished();
+        assertTrue(flow.isBusy()); // Reading the offer
+        flow.onPromptSpoken();
+        assertTrue(flow.isBusy()); // Waiting for a reply
+        assertTrue(flow.onStagedVoice());
+        assertTrue(flow.isBusy()); // Reported, announcement not read yet
+        flow.onAnnounced();
+        assertFalse(flow.isBusy());
+    }
+
+    @Test
+    public void busy_notForAReportMadeWithoutAnnouncement() {
+        flow.markReported();
+        assertFalse(flow.isBusy());
+    }
 }

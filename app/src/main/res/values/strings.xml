@@ -279,6 +279,11 @@
     <string name="route_demo_destination_ahead">%1$s 앞 목적지</string>
     <string name="route_demo_arrived">%1$s에 도착했습니다.</string>
     <string name="route_demo_remaining">남은 거리 %1$s · 약 %2$d분</string>
+    <!-- Video mode route calls, spoken like a car navigation; "미터" so every engine reads it. -->
+    <string name="route_voice_left_ahead">%1$d미터 앞에서 좌회전입니다.</string>
+    <string name="route_voice_right_ahead">%1$d미터 앞에서 우회전입니다.</string>
+    <string name="route_voice_left_now">잠시 후 좌회전입니다.</string>
+    <string name="route_voice_right_now">잠시 후 우회전입니다.</string>
 
     <!-- Video mode for the demo video: setting and hidden menu (not on screen while filming) -->
     <string name="video_mode_switch">영상 모드 (시연 영상 촬영용)</string>
@@ -297,6 +302,13 @@
     <string name="video_auto_route_after_report">신고 후</string>
     <string name="video_auto_route_on_confirm">상황 확인 직후</string>
     <string name="video_menu_fallback_route">대체 경로 화면 (내비 지도가 안 뜰 때)</string>
+    <string name="video_menu_voice_test">음성 테스트</string>
+    <string name="video_voice_test_phrase">음성 안내 테스트입니다. 이 목소리가 들리면 정상입니다.</string>
+    <string name="voice_engine_starting">음성 엔진: 준비 중</string>
+    <string name="voice_engine_pleos">음성 엔진: Pleos 음성 합성</string>
+    <string name="voice_engine_android">음성 엔진: 안드로이드 기본 음성 (Pleos 음성 사용 불가)</string>
+    <string name="voice_engine_android_no_korean">음성 엔진: 안드로이드 기본 음성, 한국어 음성 없음</string>
+    <string name="voice_engine_none">음성 엔진: 쓸 수 있는 엔진 없음</string>
 
     <!-- Video mode: natural wording in place of test wording. Reports still reach no one. -->
     <string name="video_screen_location_unset">위치 이름 미설정</string>

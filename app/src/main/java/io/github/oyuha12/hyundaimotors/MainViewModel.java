@@ -234,6 +234,7 @@ public final class MainViewModel extends AndroidViewModel {
             }
         });
         videoMode.setValue(demoPrefs().getBoolean(KEY_VIDEO_MODE, false));
+        speaker.setSilenceFallback(isVideoMode());
         driving.addSource(drivingState.isDriving(), value -> refreshDriving());
         driving.addSource(videoMode, value -> refreshDriving());
         io.execute(this::countEventRecords);
@@ -255,6 +256,8 @@ public final class MainViewModel extends AndroidViewModel {
     public void onPermissionsChanged() {
         vehicleSource.stop();
         startVehicleSource();
+        // Video mode asks for the TTS permission too; the Pleos voice can start once it is granted.
+        if (isVideoMode()) speaker.retryPleos();
     }
 
     private void onReading(VehicleSnapshot reading) {
@@ -955,18 +958,36 @@ public final class MainViewModel extends AndroidViewModel {
         demoRouteRequest.setValue(null);
     }
 
-    /** Speaks a short message, for example demo route instructions. */
-    public void say(String text) {
-        // Video mode: the guidance and report voice go first; the in-app route stays quiet.
-        if (isVideoMode() && isGuidanceSpeaking()) return;
+    /**
+     * Speaks a short message, for example demo route instructions. Video mode: the guidance and
+     * report voice go first, and the message is not said while either is talking or listening, or
+     * while another sentence is still being read; the route screen tries again a moment later.
+     *
+     * @return false when the message was held back
+     */
+    public boolean say(String text) {
+        if (isVideoMode()
+                && !VideoMode.routeVoiceFree(isGuidanceRunning(), reportFlow.isBusy(), speaker.isBusy())) {
+            return false;
+        }
         speaker.speak(text, null);
+        return true;
     }
 
-    /** Guidance steps, or the report offer and listening after them, are still going on. */
-    private boolean isGuidanceSpeaking() {
+    /** The guidance steps of a confirmed situation are still being read or waited on. */
+    private boolean isGuidanceRunning() {
         ActiveEmergency current = emergency.getValue();
-        if (current == null || !current.confirmed) return false;
-        return !sequencer.isFinished() || !reportFlow.isReported();
+        return current != null && current.confirmed && !sequencer.isFinished();
+    }
+
+    /** Video menu: reads a test sentence with whichever engine works. */
+    public void testVoice() {
+        speaker.speak(getApplication().getString(R.string.video_voice_test_phrase), null);
+    }
+
+    /** Which voice engine reads, for the video menu. */
+    public GuidanceSpeaker.Engine getVoiceEngine() {
+        return speaker.engine();
     }
 
     // ---- Video mode for the demo video ---------------------------------------------------------
@@ -992,6 +1013,7 @@ public final class MainViewModel extends AndroidViewModel {
         demoPrefs().edit().putBoolean(KEY_VIDEO_MODE, on).apply();
         stopScenario();
         videoMode.setValue(on);
+        speaker.setSilenceFallback(on);
     }
 
     /** Normal driving before a video scenario, one of {@link VideoConfig#LEAD_IN_SECONDS}. */
