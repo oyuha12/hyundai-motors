@@ -69,6 +69,25 @@
             android:text="@string/video_menu_fallback_route"
             android:textAppearance="@style/TextAppearance.App.Body" />
 
+        <!-- Reads a test sentence; the line below says which voice engine read it. -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/video_voice_test"
+            style="@style/Widget.App.Button.Tonal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/gap"
+            android:gravity="start|center_vertical"
+            android:text="@string/video_menu_voice_test"
+            app:icon="@drawable/ic_volume_up" />
+
+        <TextView
+            android:id="@+id/video_voice_engine"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/gap_small"
+            android:textAppearance="@style/TextAppearance.App.LabelSmall"
+            android:textColor="@color/on_surface_variant" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/video_scenario_acceleration"
             style="@style/Widget.App.Button.Tonal"

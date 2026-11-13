@@ -159,4 +159,12 @@ public class VideoModeTest {
         assertTrue(VideoConfig.PLACES.contains(VideoConfig.FIRE_STATION));
         assertEquals(VideoConfig.SHOW_HOSPITAL, VideoConfig.PLACES.contains(VideoConfig.HOSPITAL));
     }
+
+    @Test
+    public void routeVoice_waitsForGuidanceReportAndSpeech() {
+        assertTrue(VideoMode.routeVoiceFree(false, false, false));
+        assertFalse(VideoMode.routeVoiceFree(true, false, false)); // Guidance steps
+        assertFalse(VideoMode.routeVoiceFree(false, true, false)); // Report offer or announcement
+        assertFalse(VideoMode.routeVoiceFree(false, false, true)); // A sentence is being read
+    }
 }

@@ -111,6 +111,14 @@ public final class ReportFlow {
         return reported;
     }
 
+    /**
+     * The report part has the voice: the offer is being read or a reply is awaited, or a report
+     * was made and its announcement has not been read yet.
+     */
+    public boolean isBusy() {
+        return (offer != Offer.NONE && !reported) || (reported && !announced);
+    }
+
     /** A recognized reply. Reports when it asks for one. */
     public boolean onHeard(@Nullable String text) {
         if (!isAwaiting() || !ReportIntentClassifier.isReport(text)) return false;

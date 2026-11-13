@@ -60,4 +60,26 @@ public class DemoRouteTest {
         assertEquals(0f, route.positionAt(-50f).x, 0.01f);
         assertEquals(500f, route.positionAt(9_999f).x, 0.5f);
     }
+
+    @Test
+    public void smoothHeading_turnsGraduallyThroughTheCorner() {
+        DemoRoute route = DemoRoute.plan(1_000, 45); // north, east, north
+        float corner = route.maneuvers().get(0).atMeters;
+        // Away from corners: the leg's own direction.
+        assertEquals(0f, route.smoothHeadingAt(corner - 50f, 35f), 0.01f);
+        assertEquals(90f, route.smoothHeadingAt(corner + 50f, 35f), 0.01f);
+        // At the corner: halfway round.
+        assertEquals(45f, route.smoothHeadingAt(corner, 35f), 0.01f);
+        // Partway in: turned less than halfway, always between the two directions.
+        float early = route.smoothHeadingAt(corner - 20f, 35f);
+        assertTrue(early > 0f && early < 45f);
+    }
+
+    @Test
+    public void smoothHeading_takesTheShortWayRoundThroughNorth() {
+        // North, then west: 0 to 270 degrees must turn left through 315, not right through 135.
+        DemoRoute route = DemoRoute.plan(1_000, 315);
+        float corner = route.maneuvers().get(0).atMeters;
+        assertEquals(315f, route.smoothHeadingAt(corner, 35f), 0.01f);
+    }
 }

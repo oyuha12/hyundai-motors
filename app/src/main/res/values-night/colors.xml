@@ -24,4 +24,12 @@
     <color name="success_container">#123A26</color>
 
     <color name="negative">#FF4C28</color>
+
+    <!-- Video mode route screen: light roads between dark blocks, a deep blue sky. -->
+    <color name="route_road">#4A4D55</color>
+    <color name="route_block">#1D1E21</color>
+    <color name="route_lane_mark">#8A8E97</color>
+    <color name="route_travelled">#6A6D75</color>
+    <color name="route_sky">#0E1A2E</color>
+    <color name="route_car_shadow">#66000000</color>
 </resources>

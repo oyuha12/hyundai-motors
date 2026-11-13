@@ -72,7 +72,9 @@
             android:layout_height="match_parent" />
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- Video mode turns this white on blue, with larger type: see RouteDemoOverlay. -->
     <com.google.android.material.card.MaterialCardView
+        android:id="@+id/route_demo_panel"
         style="@style/Widget.App.Card"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
