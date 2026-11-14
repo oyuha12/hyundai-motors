@@ -156,7 +156,7 @@ public final class GuidanceSpeaker {
                     handler.post(() -> {
                         if (pleos != engine) return;
                         engine.addEventListener(pleosEvents);
-                        engine.setLocale(Locale.KOREAN);
+                        engine.setLocale(Locale.KOREA);
                         pleosReady = true;
                         pleosState = State.READY;
                         Log.i(TAG, "Pleos TTS ready (" + mode + ")");
