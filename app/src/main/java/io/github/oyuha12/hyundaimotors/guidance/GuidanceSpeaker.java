@@ -18,15 +18,20 @@ import java.util.Locale;
  * Reads guidance aloud with the Pleos on-device engine, and falls back to the Android engine
  * when the Pleos one is not available. On-device mode works without a network connection.
  *
+ * <p>Video mode ({@link #setVideoMode}) makes every guidance sentence come out by itself the
+ * moment its text appears, following {@link SpeechPolicy}: no stop for an idle engine, no
+ * sentence racing a stop, a sentence held until an engine is ready, the Pleos engine retried in
+ * hybrid mode when on-device synthesis fails, and given up only for an engine that reads Korean.
+ *
  * <p>Logcat tag "GuidanceSpeaker" says which engine started, which one read each sentence, and
- * why the Pleos one could not be used. {@link #engine()} gives the same for the screen.
+ * why. {@link #engine()} and {@link #lastOutcome()} give the same for the video menu.
  */
 public final class GuidanceSpeaker {
     /** Which engine reads, as far as the app can tell. */
     public enum Engine {
         /** Neither engine has answered yet. */
         STARTING,
-        /** The Pleos on-device engine. */
+        /** The Pleos engine. */
         PLEOS,
         /** The Android engine, because the Pleos one is not available. */
         ANDROID,
@@ -36,12 +41,28 @@ public final class GuidanceSpeaker {
         NONE
     }
 
+    /** What became of the last sentence, as far as the engines said. */
+    public enum Outcome {
+        NONE,
+        /** Held until an engine is ready. */
+        WAITING_FOR_ENGINE,
+        /** Sent to the Pleos engine, which has not said it started. */
+        PLEOS_SENT,
+        PLEOS_STARTED,
+        /** The Pleos engine did not answer and no other engine reads Korean. */
+        PLEOS_SILENT,
+        /** Sent to the Android engine, which has not said it started. */
+        ANDROID_SENT,
+        ANDROID_STARTED,
+        ANDROID_ERROR,
+        /** No engine could take the sentence. */
+        NO_ENGINE
+    }
+
     private enum State { STARTING, READY, FAILED }
 
     private static final String TAG = "GuidanceSpeaker";
     private static final String UTTERANCE_ID = "guidance";
-    /** With the silence check on: a Pleos sentence with no sign of life after this is given up. */
-    private static final long PLEOS_SILENCE_MILLIS = 3_500L;
     /** {@link #isBusy()} gives up on a sentence that never reports its end after this long. */
     private static final long BUSY_MAX_MILLIS = 12_000L;
 
@@ -50,9 +71,12 @@ public final class GuidanceSpeaker {
     @Nullable private TextToSpeech pleos;
     private boolean pleosReady;
     private State pleosState = State.STARTING;
-    /** The Pleos engine took a sentence and never answered: see {@link #setSilenceFallback}. */
+    private Mode pleosMode = Mode.ON_DEVICE;
+    private boolean triedHybrid;
+    /** Video mode: the Pleos engine stayed silent too often; the Android engine reads instead. */
     private boolean pleosSilent;
-    private boolean silenceFallback;
+    private int silentInARow;
+    private boolean videoMode;
     private boolean pleosAnswered;
     @Nullable private android.speech.tts.TextToSpeech fallback;
     private boolean fallbackReady;
@@ -62,44 +86,54 @@ public final class GuidanceSpeaker {
     @Nullable private String pendingText;
     /** When the sentence in {@link #pendingText} went to an engine; 0 when none took it. */
     private long speakingSince;
+    /** Video mode: when a sentence began waiting for an engine; 0 when none waits. */
+    private long waitingSince;
+    /** When a stop last went to the engines; 0 for never. */
+    private long lastStopAt;
+    private Outcome outcome = Outcome.NONE;
 
     private final Runnable silenceCheck = this::onPleosSilent;
+    private final Runnable settledSpeak = this::speakNow;
 
     private final EventListener pleosEvents = new EventListener() {
         @Override
         public void onStart() {
-            pleosAnswered();
+            handler.post(() -> {
+                pleosAnswered();
+                if (pendingText != null) outcome = Outcome.PLEOS_STARTED;
+            });
         }
 
         @Override
         public void onReady() {
-            pleosAnswered();
+            handler.post(GuidanceSpeaker.this::pleosAnswered);
         }
 
         @Override
         public void onUpdatedRms(double rms) {
-            pleosAnswered();
+            handler.post(GuidanceSpeaker.this::pleosAnswered);
         }
 
         @Override
         public void onStop() {
-            pleosAnswered();
+            handler.post(GuidanceSpeaker.this::pleosAnswered);
         }
 
         @Override
         public void onDone() {
-            pleosAnswered();
+            handler.post(GuidanceSpeaker.this::pleosAnswered);
             finish();
         }
 
         @Override
         public void onError(ErrorType error) {
-            Log.w(TAG, "Pleos TTS error: " + error);
+            Log.w(TAG, "Pleos TTS error (" + pleosMode + "): " + error);
             handler.post(() -> {
                 handler.removeCallbacks(silenceCheck);
                 pleosReady = false;
                 pleosState = State.FAILED;
                 if (pendingText != null) speakWithFallback(pendingText);
+                tryHybrid();
             });
         }
     };
@@ -107,13 +141,14 @@ public final class GuidanceSpeaker {
     public GuidanceSpeaker(Context context) {
         appContext = context.getApplicationContext();
         startFallback(appContext);
-        startPleos();
+        startPleos(Mode.ON_DEVICE);
     }
 
-    private void startPleos() {
+    private void startPleos(Mode mode) {
+        pleosMode = mode;
         pleosState = State.STARTING;
         try {
-            TextToSpeech engine = new TextToSpeech(appContext, Mode.ON_DEVICE);
+            TextToSpeech engine = new TextToSpeech(appContext, mode);
             pleos = engine;
             engine.initialize(new OnInitializeListener() {
                 @Override
@@ -124,48 +159,80 @@ public final class GuidanceSpeaker {
                         engine.setLocale(Locale.KOREAN);
                         pleosReady = true;
                         pleosState = State.READY;
-                        Log.i(TAG, "Pleos TTS ready (on-device)");
+                        Log.i(TAG, "Pleos TTS ready (" + mode + ")");
+                        onEngineReady();
                     });
                 }
 
                 @Override
                 public void onFailure(ErrorType error) {
-                    Log.w(TAG, "Pleos TTS unavailable: " + error);
+                    Log.w(TAG, "Pleos TTS unavailable (" + mode + "): " + error);
                     handler.post(() -> {
-                        if (pleos == engine) pleosState = State.FAILED;
+                        if (pleos != engine) return;
+                        pleosState = State.FAILED;
+                        tryHybrid();
+                        onEngineReady();
                     });
                 }
             });
         } catch (RuntimeException | LinkageError error) {
             // A missing pleos.car.permission.TTS_SERVICE ends here as a SecurityException.
-            Log.w(TAG, "Pleos TTS unavailable", error);
+            Log.w(TAG, "Pleos TTS unavailable (" + mode + ")", error);
             pleosState = State.FAILED;
         }
     }
 
     /**
-     * Tries the Pleos engine again if it did not start, for example after the TTS permission
-     * was granted. Does nothing while it works.
+     * Video mode: the on-device engine failed, so try the Pleos engine once more in hybrid mode,
+     * which synthesizes on the server when the network is up and on the device otherwise.
+     */
+    private void tryHybrid() {
+        if (!videoMode || triedHybrid || pleosMode == Mode.HYBRID) return;
+        triedHybrid = true;
+        Log.i(TAG, "Trying Pleos TTS in HYBRID mode");
+        releasePleos();
+        startPleos(Mode.HYBRID);
+    }
+
+    /**
+     * Tries the Pleos engine again from on-device mode if it did not start, for example after
+     * the TTS permission was granted. Does nothing while it works.
      */
     public void retryPleos() {
         if (pleosState != State.FAILED) return;
         Log.i(TAG, "Retrying Pleos TTS");
+        triedHybrid = false;
         releasePleos();
-        startPleos();
+        startPleos(Mode.ON_DEVICE);
     }
 
     private void startFallback(Context context) {
         fallback = new android.speech.tts.TextToSpeech(context, status -> {
             if (status != android.speech.tts.TextToSpeech.SUCCESS || fallback == null) {
                 Log.w(TAG, "Android TTS unavailable: " + status);
-                fallbackState = State.FAILED;
+                handler.post(() -> {
+                    fallbackState = State.FAILED;
+                    onEngineReady();
+                });
                 return;
             }
             int language = fallback.setLanguage(Locale.KOREAN);
-            fallbackKorean = language >= android.speech.tts.TextToSpeech.LANG_AVAILABLE;
-            if (!fallbackKorean) Log.w(TAG, "Android TTS has no Korean voice: " + language);
+            if (language < android.speech.tts.TextToSpeech.LANG_AVAILABLE) {
+                // Some engines know Korean only with the country: ko-KR.
+                language = fallback.setLanguage(Locale.KOREA);
+            }
+            boolean korean = language >= android.speech.tts.TextToSpeech.LANG_AVAILABLE;
+            if (!korean) Log.w(TAG, "Android TTS has no Korean voice: " + language);
+            for (android.speech.tts.TextToSpeech.EngineInfo info : fallback.getEngines()) {
+                Log.i(TAG, "Android TTS engine installed: " + info.name);
+            }
             fallback.setOnUtteranceProgressListener(new UtteranceProgressListener() {
-                @Override public void onStart(String utteranceId) {}
+                @Override
+                public void onStart(String utteranceId) {
+                    handler.post(() -> {
+                        if (pendingText != null) outcome = Outcome.ANDROID_STARTED;
+                    });
+                }
 
                 @Override
                 public void onDone(String utteranceId) {
@@ -174,49 +241,103 @@ public final class GuidanceSpeaker {
 
                 @Override
                 public void onError(String utteranceId) {
+                    onError(utteranceId, 0);
+                }
+
+                @Override
+                public void onError(String utteranceId, int errorCode) {
+                    Log.w(TAG, "Android TTS error: " + errorCode);
+                    handler.post(() -> outcome = Outcome.ANDROID_ERROR);
                     finish();
                 }
             });
-            fallbackReady = true;
-            fallbackState = State.READY;
-            Log.i(TAG, "Android TTS ready, engine " + fallback.getDefaultEngine());
+            handler.post(() -> {
+                fallbackKorean = korean;
+                fallbackReady = true;
+                fallbackState = State.READY;
+                Log.i(TAG, "Android TTS ready, engine " + fallback.getDefaultEngine()
+                        + (korean ? ", Korean" : ", no Korean"));
+                onEngineReady();
+            });
         });
     }
 
     /**
-     * Video mode: when the Pleos engine takes a sentence and gives no sign of reading it, stop
-     * it, read the sentence with the Android engine, and keep using that one. Off: as before.
+     * Video mode on: the rules in {@link SpeechPolicy}. Off: as before. Also tries the Pleos
+     * engine in hybrid mode if the on-device one has already failed.
      */
-    public void setSilenceFallback(boolean on) {
-        silenceFallback = on;
-        if (!on) handler.removeCallbacks(silenceCheck);
+    public void setVideoMode(boolean on) {
+        videoMode = on;
+        if (!on) {
+            handler.removeCallbacks(silenceCheck);
+            waitingSince = 0L;
+        } else if (pleosState == State.FAILED) {
+            tryHybrid();
+        }
     }
 
-    /** Speaks text. onDone may not run if no engine works, so callers need their own timeout. */
+    /**
+     * Speaks text, replacing any sentence still being read. onDone may not run if no engine
+     * works, so callers need their own timeout.
+     */
     public void speak(String text, @Nullable Runnable onDone) {
         this.onDone = onDone;
         pendingText = text;
         speakingSince = 0L;
+        waitingSince = 0L;
         handler.removeCallbacks(silenceCheck);
+        handler.removeCallbacks(settledSpeak);
+        long settle = SpeechPolicy.settleDelay(videoMode, lastStopAt, SystemClock.elapsedRealtime());
+        if (settle > 0L) {
+            handler.postDelayed(settledSpeak, settle);
+        } else {
+            speakNow();
+        }
+    }
+
+    /** Hands {@link #pendingText} to the first engine that can take it. */
+    private void speakNow() {
+        String text = pendingText;
+        if (text == null) return;
         if (usesPleos()) {
             try {
                 pleosAnswered = false;
                 pleos.speak(text, true);
                 speakingSince = SystemClock.elapsedRealtime();
-                Log.d(TAG, "Pleos: " + text);
-                if (silenceFallback) handler.postDelayed(silenceCheck, PLEOS_SILENCE_MILLIS);
+                outcome = Outcome.PLEOS_SENT;
+                Log.d(TAG, "Pleos (" + pleosMode + "): " + text);
+                if (videoMode) handler.postDelayed(silenceCheck, SpeechPolicy.PLEOS_SILENCE_MILLIS);
                 return;
             } catch (RuntimeException error) {
                 Log.w(TAG, "Pleos TTS speak failed", error);
                 pleosReady = false;
                 pleosState = State.FAILED;
+                tryHybrid();
             }
         }
-        speakWithFallback(text);
+        if (fallbackReady && fallback != null) {
+            speakWithFallback(text);
+        } else if (videoMode && engine() == Engine.STARTING) {
+            // Read once an engine is ready: see onEngineReady.
+            waitingSince = SystemClock.elapsedRealtime();
+            outcome = Outcome.WAITING_FOR_ENGINE;
+            Log.i(TAG, "Waiting for a voice engine: " + text);
+        } else {
+            outcome = Outcome.NO_ENGINE;
+            Log.w(TAG, "No voice engine for: " + text);
+        }
+    }
+
+    /** An engine became ready or failed: a sentence held for one is read now if still due. */
+    private void onEngineReady() {
+        if (pendingText == null || speakingSince > 0L) return;
+        if (!SpeechPolicy.readsWhenReady(videoMode, waitingSince, SystemClock.elapsedRealtime())) return;
+        waitingSince = 0L;
+        speakNow();
     }
 
     private boolean usesPleos() {
-        return pleosReady && pleos != null && !(silenceFallback && pleosSilent);
+        return pleosReady && pleos != null && !(videoMode && pleosSilent);
     }
 
     private void speakWithFallback(String text) {
@@ -224,23 +345,38 @@ public final class GuidanceSpeaker {
             fallback.speak(
                     text, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, UTTERANCE_ID);
             speakingSince = SystemClock.elapsedRealtime();
+            outcome = Outcome.ANDROID_SENT;
             Log.d(TAG, "Android: " + text);
         } else {
+            outcome = Outcome.NO_ENGINE;
             Log.w(TAG, "No voice engine for: " + text);
         }
     }
 
+    /** Any event from the Pleos engine: it is alive. Runs on the main thread. */
     private void pleosAnswered() {
-        handler.post(() -> {
-            pleosAnswered = true;
-            handler.removeCallbacks(silenceCheck);
-        });
+        pleosAnswered = true;
+        silentInARow = 0;
+        handler.removeCallbacks(silenceCheck);
     }
 
     private void onPleosSilent() {
         if (pleosAnswered || pendingText == null) return;
-        Log.w(TAG, "Pleos TTS gave no sign of speaking; using the Android engine from now on");
-        pleosSilent = true;
+        SpeechPolicy.Silence action =
+                SpeechPolicy.onSilence(fallbackReady && fallbackKorean, silentInARow);
+        if (action == SpeechPolicy.Silence.KEEP_WAITING) {
+            // Stopping it would leave nothing that can read Korean.
+            Log.w(TAG, "Pleos TTS gave no sign of speaking; no Korean Android voice to use instead");
+            outcome = Outcome.PLEOS_SILENT;
+            return;
+        }
+        silentInARow++;
+        if (action == SpeechPolicy.Silence.ANDROID_FROM_NOW_ON) {
+            Log.w(TAG, "Pleos TTS silent " + silentInARow + " times; using the Android engine from now on");
+            pleosSilent = true;
+        } else {
+            Log.w(TAG, "Pleos TTS gave no sign of speaking; this sentence goes to the Android engine");
+        }
         try {
             if (pleos != null) pleos.stop();
         } catch (RuntimeException error) {
@@ -264,6 +400,16 @@ public final class GuidanceSpeaker {
         return Engine.NONE;
     }
 
+    /** Whether the Pleos engine runs in hybrid mode, after on-device synthesis failed. */
+    public boolean isPleosHybrid() {
+        return pleosMode == Mode.HYBRID;
+    }
+
+    /** What became of the last sentence. */
+    public Outcome lastOutcome() {
+        return outcome;
+    }
+
     private void finish() {
         handler.post(() -> {
             Runnable done = onDone;
@@ -276,11 +422,21 @@ public final class GuidanceSpeaker {
     }
 
     public void stop() {
+        boolean speaking = pendingText != null;
         onDone = null;
         pendingText = null;
         speakingSince = 0L;
+        waitingSince = 0L;
         handler.removeCallbacks(silenceCheck);
-        if (pleosReady && pleos != null) pleos.stop();
+        handler.removeCallbacks(settledSpeak);
+        // Video mode: an idle engine gets no stop, so the next sentence goes out at once.
+        if (!SpeechPolicy.sendsStop(videoMode, speaking)) return;
+        lastStopAt = SystemClock.elapsedRealtime();
+        try {
+            if (pleosReady && pleos != null) pleos.stop();
+        } catch (RuntimeException error) {
+            Log.w(TAG, "Pleos TTS stop failed", error);
+        }
         if (fallback != null) fallback.stop();
     }
 

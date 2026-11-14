@@ -234,7 +234,8 @@ public final class MainViewModel extends AndroidViewModel {
             }
         });
         videoMode.setValue(demoPrefs().getBoolean(KEY_VIDEO_MODE, false));
-        speaker.setSilenceFallback(isVideoMode());
+        speaker.setVideoMode(isVideoMode());
+        voice.setQuietWhenIdle(isVideoMode());
         driving.addSource(drivingState.isDriving(), value -> refreshDriving());
         driving.addSource(videoMode, value -> refreshDriving());
         io.execute(this::countEventRecords);
@@ -990,6 +991,16 @@ public final class MainViewModel extends AndroidViewModel {
         return speaker.engine();
     }
 
+    /** Whether the Pleos voice runs in hybrid mode, for the video menu. */
+    public boolean isVoiceHybrid() {
+        return speaker.isPleosHybrid();
+    }
+
+    /** What became of the last sentence read aloud, for the video menu. */
+    public GuidanceSpeaker.Outcome getVoiceOutcome() {
+        return speaker.lastOutcome();
+    }
+
     // ---- Video mode for the demo video ---------------------------------------------------------
 
     private static final String KEY_VIDEO_MODE = "video_mode";
@@ -1013,7 +1024,8 @@ public final class MainViewModel extends AndroidViewModel {
         demoPrefs().edit().putBoolean(KEY_VIDEO_MODE, on).apply();
         stopScenario();
         videoMode.setValue(on);
-        speaker.setSilenceFallback(on);
+        speaker.setVideoMode(on);
+        voice.setQuietWhenIdle(on);
     }
 
     /** Normal driving before a video scenario, one of {@link VideoConfig#LEAD_IN_SECONDS}. */
