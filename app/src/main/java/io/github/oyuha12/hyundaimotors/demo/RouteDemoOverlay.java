@@ -46,6 +46,11 @@ public final class RouteDemoOverlay {
     /** Announce a turn when it is this close. */
     static final float ANNOUNCE_METERS = 150f;
     /**
+     * Off: the route screen is silent ("안내를 시작합니다", "300m 앞에서 좌회전" and the like are
+     * shown, not read), so only the situation guidance speaks. True brings the calls back.
+     */
+    static final boolean ROUTE_VOICE = false;
+    /**
      * 10 frames a second. Playback is timed by the clock, so this changes smoothness, not speed.
      * The map is costly to draw on a PC emulator with software rendering (SwiftShader), where 20
      * frames a second kept the main thread busy and delayed the voice.
@@ -95,7 +100,7 @@ public final class RouteDemoOverlay {
             if (meters >= route.lengthMeters()) {
                 playing = false;
                 updatePauseButton();
-                if (videoMode) startRetrying();
+                if (ROUTE_VOICE && videoMode) startRetrying();
                 return;
             }
             handler.postDelayed(this, FRAME_MILLIS);
@@ -144,7 +149,9 @@ public final class RouteDemoOverlay {
         root.setVisibility(View.VISIBLE);
         restart();
         // Video mode says this through RouteVoice, once the voice is free.
-        if (!videoMode) speaker.say(root.getContext().getString(R.string.route_demo_start, facility.name));
+        if (ROUTE_VOICE && !videoMode) {
+            speaker.say(root.getContext().getString(R.string.route_demo_start, facility.name));
+        }
     }
 
     /**
@@ -274,7 +281,7 @@ public final class RouteDemoOverlay {
                 R.string.route_demo_remaining, formatDistance(context, left), Math.max(minutes, 0)));
 
         DemoRoute.Maneuver next = route.nextManeuver(meters);
-        if (videoMode) speakDue();
+        if (ROUTE_VOICE && videoMode) speakDue();
         if (left <= 1f) {
             turnIcon.setText("●");
             showArrival(context.getString(R.string.route_demo_arrived, destinationName));
@@ -295,7 +302,9 @@ public final class RouteDemoOverlay {
                 leftTurn ? R.string.route_demo_turn_left : R.string.route_demo_turn_right,
                 formatDistance(context, toTurn));
         showInstruction(text);
-        if (!videoMode && toTurn <= ANNOUNCE_METERS && announced.add(next.atMeters)) speaker.say(text);
+        if (ROUTE_VOICE && !videoMode && toTurn <= ANNOUNCE_METERS && announced.add(next.atMeters)) {
+            speaker.say(text);
+        }
     }
 
     /**

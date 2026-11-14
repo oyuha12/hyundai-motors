@@ -215,7 +215,7 @@
     <!-- %1$s: 상황 이름 + 이/가 (급발진이, 차량 화재가). 첫 문장은 suspected_announcement와 같아야 합니다. -->
     <string name="confirm_prompt_detected">%1$s 의심됩니다. 비상상황이 맞으면 네, 아니면 아니요라고 말씀해 주세요.</string>
     <string name="suspected_announcement">%1$s 의심됩니다.</string>
-    <string name="confirm_prompt_manual">%1$s 상황을 선택하셨습니다. 비상상황이 맞으면 네, 아니면 아니요라고 말씀해 주세요.</string>
+    <string name="confirm_prompt_manual">%1$s 감지되었습니다. 비상상황이 맞으면 네, 아니면 아니요라고 말씀해 주세요.</string>
     <string name="confirm_reprompt">잘 듣지 못했습니다. 네 또는 아니요로 답해 주세요.</string>
     <string name="confirm_declined">비상상황이 아니므로 처음 화면으로 돌아갑니다.</string>
     <string name="back_to_normal">상태가 정상으로 돌아와 처음 화면으로 돌아갑니다.</string>

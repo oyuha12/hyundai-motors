@@ -356,8 +356,9 @@ public final class MainViewModel extends AndroidViewModel {
         ask(pending.detected
                 ? getApplication().getString(
                         R.string.confirm_prompt_detected, suspectedSubject(pending.type))
-                : getApplication().getString(R.string.confirm_prompt_manual,
-                        getApplication().getString(EmergencyPlan.title(pending.type))));
+                // A situation button: "급발진이 감지되었습니다." The particle follows the name.
+                : getApplication().getString(
+                        R.string.confirm_prompt_manual, suspectedSubject(pending.type)));
         if (pending.detected) {
             saveEventRecord(pending);
             countdown.setValue(NO_ANSWER_SECONDS);
