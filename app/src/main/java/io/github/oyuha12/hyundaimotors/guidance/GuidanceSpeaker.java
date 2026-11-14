@@ -392,6 +392,16 @@ public final class GuidanceSpeaker {
                 && SystemClock.elapsedRealtime() - speakingSince < BUSY_MAX_MILLIS;
     }
 
+    /**
+     * A sentence went to an engine and has not finished, for at most maxMillis since then.
+     * Timers that would cut it off wait for this instead, as a slow device can start late.
+     */
+    public boolean isReading(long maxMillis) {
+        return pendingText != null
+                && speakingSince > 0L
+                && SystemClock.elapsedRealtime() - speakingSince < maxMillis;
+    }
+
     /** Which engine the next sentence goes to. */
     public Engine engine() {
         if (usesPleos()) return Engine.PLEOS;

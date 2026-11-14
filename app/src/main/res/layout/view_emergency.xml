@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Narrow window: the step first, then actions, evacuation route and nearby help. -->
+<!-- Narrow window: the step first, then the SOS button, evacuation route and other actions. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/emergency_overlay"
     android:layout_width="match_parent"
@@ -20,11 +20,5 @@
         <include layout="@layout/view_emergency_step" />
 
         <include layout="@layout/view_emergency_actions" />
-
-        <include
-            layout="@layout/view_emergency_support"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/section_gap" />
     </LinearLayout>
 </ScrollView>

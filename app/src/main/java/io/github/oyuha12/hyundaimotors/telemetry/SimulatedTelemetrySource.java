@@ -34,7 +34,15 @@ public final class SimulatedTelemetrySource implements TelemetrySource {
         /** 40 km/h, then the brake is held while the car speeds up to about 90 km/h. */
         VIDEO_ACCELERATION,
         /** 60 km/h, then the cabin heats up fast and stays hot. */
-        VIDEO_FIRE
+        VIDEO_FIRE,
+        // Home screen demo, outside video mode. Each starts from the speed the car had
+        // (baseSpeedKph) and pulls over once the guidance asks the driver to stop.
+        /** "주행으로 전환": eases to about 60 km/h and keeps changing a little, like real driving. */
+        DEMO_CRUISE,
+        /** The 급발진 button: the speed climbs steeply, with no brake, before the question. */
+        DEMO_ACCELERATION,
+        /** The 화재 button: the cabin heats up fast before the question; the speed carries on. */
+        DEMO_FIRE
     }
 
     /**
@@ -57,10 +65,24 @@ public final class SimulatedTelemetrySource implements TelemetrySource {
     static final long FIRE_STOP_MILLIS = 6_000L;
     static final float ACCELERATION_TOP_KPH = 90f;
     static final float FIRE_CABIN_PEAK_C = 80f;
+    /** Home demo: cruising speed, and how fast the car eases to it. */
+    static final float DEMO_CRUISE_KPH = 60f;
+    /** Slow enough that leaving a standstill never looks like a pedal mistake (25 km/h in 1.5 s). */
+    static final float DEMO_RAMP_KPH_PER_SECOND = 10f;
+    /** Home demo 급발진: the climb, and its top (at least this, or 50 km/h above the start). */
+    static final float DEMO_ACCELERATION_KPH_PER_SECOND = 25f;
+    static final float DEMO_ACCELERATION_MIN_TOP_KPH = 100f;
+    static final float DEMO_ACCELERATION_GAIN_KPH = 50f;
+    /** Home demo 화재: the cabin climbs from a normal temperature to a peak. */
+    static final float DEMO_CABIN_START_C = 24f;
+    static final float DEMO_CABIN_C_PER_SECOND = 15f;
+    static final float DEMO_CABIN_PEAK_C = 85f;
 
     private final Scenario scenario;
     private final long leadInMillis;
     private final PositionSource positions;
+    /** The speed when a home demo scenario started; 0 for the others. */
+    private final float baseSpeedKph;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Listener listener;
     private long startedAtMillis;
@@ -74,7 +96,8 @@ public final class SimulatedTelemetrySource implements TelemetrySource {
             // Scenario time advances per tick, so a slow device cannot change the outcome.
             long elapsed = tickCount++ * TICK_MILLIS;
             listener.onSnapshot(snapshotAt(scenario, elapsed, leadInMillis,
-                    startedAtMillis + elapsed, positions.lastPosition(), stopRequestedAtMillis));
+                    startedAtMillis + elapsed, positions.lastPosition(), stopRequestedAtMillis,
+                    baseSpeedKph));
             handler.postDelayed(this, TICK_MILLIS);
         }
     };
@@ -85,9 +108,20 @@ public final class SimulatedTelemetrySource implements TelemetrySource {
      * @param positions where the car is, read on every reading
      */
     public SimulatedTelemetrySource(Scenario scenario, long leadInMillis, PositionSource positions) {
+        this(scenario, leadInMillis, positions, 0f);
+    }
+
+    /** @param baseSpeedKph the speed the car had, where a home demo scenario starts from */
+    public SimulatedTelemetrySource(
+            Scenario scenario, long leadInMillis, PositionSource positions, float baseSpeedKph) {
         this.scenario = scenario;
         this.leadInMillis = Math.max(0L, leadInMillis);
         this.positions = positions;
+        this.baseSpeedKph = Math.max(0f, baseSpeedKph);
+    }
+
+    public Scenario scenario() {
+        return scenario;
     }
 
     @Override
@@ -103,8 +137,8 @@ public final class SimulatedTelemetrySource implements TelemetrySource {
     }
 
     /**
-     * The guidance has asked the driver to stop: a video scenario pulls over from the next
-     * reading on. Other scenarios ignore it. Only the first request counts, so reading the
+     * The guidance has asked the driver to stop: a video or home demo scenario pulls over from
+     * the next reading on. Other scenarios ignore it. Only the first request counts, so reading the
      * steps again does not restart the stop.
      */
     public void startStopping() {
@@ -125,14 +159,6 @@ public final class SimulatedTelemetrySource implements TelemetrySource {
                 scenario, elapsedMillis, leadInMillis, timestampMillis, position, NOT_STOPPING);
     }
 
-    /**
-     * One reading. During the lead-in the scenario's first reading is held, so nothing unusual
-     * happens; after it the scenario plays exactly as it would without a lead-in.
-     *
-     * @param position where the car is; null uses {@link VideoConfig#FALLBACK_POSITION}
-     * @param stopRequestedAtMillis scenario time from which a video scenario pulls over, or
-     *     {@link #NOT_STOPPING}
-     */
     static VehicleSnapshot snapshotAt(
             Scenario scenario,
             long elapsedMillis,
@@ -140,6 +166,27 @@ public final class SimulatedTelemetrySource implements TelemetrySource {
             long timestampMillis,
             @Nullable GeoPoint position,
             long stopRequestedAtMillis) {
+        return snapshotAt(scenario, elapsedMillis, leadInMillis, timestampMillis, position,
+                stopRequestedAtMillis, 0f);
+    }
+
+    /**
+     * One reading. During the lead-in the scenario's first reading is held, so nothing unusual
+     * happens; after it the scenario plays exactly as it would without a lead-in.
+     *
+     * @param position where the car is; null uses {@link VideoConfig#FALLBACK_POSITION}
+     * @param stopRequestedAtMillis scenario time from which a video or home demo scenario pulls
+     *     over, or {@link #NOT_STOPPING}
+     * @param baseSpeedKph where a home demo scenario starts from
+     */
+    static VehicleSnapshot snapshotAt(
+            Scenario scenario,
+            long elapsedMillis,
+            long leadInMillis,
+            long timestampMillis,
+            @Nullable GeoPoint position,
+            long stopRequestedAtMillis,
+            float baseSpeedKph) {
         float seconds = scenarioSeconds(elapsedMillis, leadInMillis);
         boolean stopping =
                 stopRequestedAtMillis != NOT_STOPPING && elapsedMillis >= stopRequestedAtMillis;
@@ -213,6 +260,39 @@ public final class SimulatedTelemetrySource implements TelemetrySource {
                     brake = speed > 0f;
                 }
                 break;
+            case DEMO_CRUISE:
+                speed = demoCruiseSpeed(baseSpeedKph, seconds);
+                if (stopping) {
+                    float atRequest = demoCruiseSpeed(baseSpeedKph,
+                            scenarioSeconds(stopRequestedAtMillis, leadInMillis));
+                    speed = stoppingSpeed(
+                            atRequest, elapsedMillis, stopRequestedAtMillis, FIRE_STOP_MILLIS);
+                    brake = speed > 0f;
+                }
+                break;
+            case DEMO_ACCELERATION:
+                speed = demoAccelerationSpeed(baseSpeedKph, seconds);
+                if (stopping) {
+                    // As in the video: neutral, parking brake held, then park.
+                    float atRequest = demoAccelerationSpeed(baseSpeedKph,
+                            scenarioSeconds(stopRequestedAtMillis, leadInMillis));
+                    speed = stoppingSpeed(atRequest, elapsedMillis, stopRequestedAtMillis,
+                            ACCELERATION_STOP_MILLIS);
+                    brake = true;
+                    gear = speed > 0f ? Gear.NEUTRAL : Gear.PARK;
+                }
+                break;
+            case DEMO_FIRE:
+                speed = demoFireSpeed(baseSpeedKph, seconds);
+                cabin = demoFireCabin(seconds);
+                if (stopping) {
+                    float atRequest = demoFireSpeed(baseSpeedKph,
+                            scenarioSeconds(stopRequestedAtMillis, leadInMillis));
+                    speed = stoppingSpeed(
+                            atRequest, elapsedMillis, stopRequestedAtMillis, FIRE_STOP_MILLIS);
+                    brake = speed > 0f;
+                }
+                break;
         }
         GeoPoint at = position != null ? position : VideoConfig.FALLBACK_POSITION;
         float wobbleSeconds = elapsedMillis / 1000f;
@@ -234,6 +314,41 @@ public final class SimulatedTelemetrySource implements TelemetrySource {
     /** Seconds since the lead-in ended. */
     private static float scenarioSeconds(long elapsedMillis, long leadInMillis) {
         return Math.max(0L, elapsedMillis - leadInMillis) / 1000f;
+    }
+
+    /**
+     * A few slow waves of different lengths, within about ±4 km/h: the speed never repeats
+     * exactly, like a driver keeping pace with traffic.
+     */
+    static float drift(float seconds) {
+        return (float) (2.5 * Math.sin(0.45 * seconds)
+                + 1.2 * Math.sin(1.3 * seconds + 1.0)
+                + 0.5 * Math.sin(2.9 * seconds + 2.0));
+    }
+
+    /** Eases from the start speed to {@link #DEMO_CRUISE_KPH}, the drift growing with it. */
+    static float demoCruiseSpeed(float baseSpeedKph, float seconds) {
+        float rampSeconds = Math.abs(DEMO_CRUISE_KPH - baseSpeedKph) / DEMO_RAMP_KPH_PER_SECOND;
+        float progress = rampSeconds <= 0f ? 1f : Math.min(1f, seconds / rampSeconds);
+        float level = baseSpeedKph + (DEMO_CRUISE_KPH - baseSpeedKph) * progress;
+        return Math.max(0f, level + drift(seconds) * progress);
+    }
+
+    /** Climbs steeply from the start speed to a top well above it. */
+    static float demoAccelerationSpeed(float baseSpeedKph, float seconds) {
+        float top = Math.max(
+                DEMO_ACCELERATION_MIN_TOP_KPH, baseSpeedKph + DEMO_ACCELERATION_GAIN_KPH);
+        return Math.min(top, baseSpeedKph + DEMO_ACCELERATION_KPH_PER_SECOND * seconds);
+    }
+
+    /** The car keeps its pace while the cabin heats up; a parked car stays parked. */
+    static float demoFireSpeed(float baseSpeedKph, float seconds) {
+        if (baseSpeedKph <= 0f) return 0f;
+        return Math.max(0f, baseSpeedKph + drift(seconds) - drift(0f));
+    }
+
+    static float demoFireCabin(float seconds) {
+        return Math.min(DEMO_CABIN_PEAK_C, DEMO_CABIN_START_C + DEMO_CABIN_C_PER_SECOND * seconds);
     }
 
     private static float videoAccelerationSpeed(float seconds) {

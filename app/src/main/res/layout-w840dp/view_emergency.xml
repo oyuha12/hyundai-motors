@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Wide window: the step large on the left, filling the height; the SOS button, other actions,
-    evacuation route and nearby help on the right.
+    and the evacuation route on the right.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/emergency_overlay"
@@ -38,12 +38,6 @@
             android:orientation="vertical">
 
             <include layout="@layout/view_emergency_actions" />
-
-            <include
-                layout="@layout/view_emergency_support"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/section_gap" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

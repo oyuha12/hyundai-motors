@@ -47,6 +47,7 @@ final class StepAnimator {
             running.cancel();
             running = null;
         }
+        target.setLayerType(View.LAYER_TYPE_NONE, null);
         resetPose();
     }
 
@@ -54,6 +55,9 @@ final class StepAnimator {
         stop();
         if (!allowed || motion == null || !ValueAnimator.areAnimatorsEnabled()) return;
         running = build(motion);
+        // Drawn once into a layer: the loop then only moves, scales or fades that image, which
+        // is far cheaper where rendering runs on the CPU (PC emulators use SwiftShader).
+        target.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         running.start();
     }
 

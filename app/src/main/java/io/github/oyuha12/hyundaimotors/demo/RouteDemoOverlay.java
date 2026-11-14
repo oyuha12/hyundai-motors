@@ -2,9 +2,12 @@ package io.github.oyuha12.hyundaimotors.demo;
 
 import android.content.Context;
 import android.content.res.ColorStateList;
+import android.graphics.Paint;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.text.TextUtils;
+import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
@@ -42,7 +45,12 @@ public final class RouteDemoOverlay {
     public static final int VIDEO_SPEED_UP = 4;
     /** Announce a turn when it is this close. */
     static final float ANNOUNCE_METERS = 150f;
-    private static final long FRAME_MILLIS = 50L;
+    /**
+     * 10 frames a second. Playback is timed by the clock, so this changes smoothness, not speed.
+     * The map is costly to draw on a PC emulator with software rendering (SwiftShader), where 20
+     * frames a second kept the main thread busy and delayed the voice.
+     */
+    private static final long FRAME_MILLIS = 100L;
     /** Video mode: how often, and how long, a call waits for the voice after playback ends. */
     private static final long RETRY_MILLIS = 300L;
     private static final long RETRY_FOR_MILLIS = 15_000L;
@@ -68,6 +76,9 @@ public final class RouteDemoOverlay {
     private long lastFrame;
     private boolean playing;
     private boolean arrived;
+    /** The instruction's own text size while the arrival line is shrunk to fit; 0 otherwise. */
+    private float instructionSizePx;
+    private final Runnable fitArrival = this::fitArrivalOnOneLine;
     private boolean videoMode;
     private long retryUntil;
 
@@ -153,10 +164,59 @@ public final class RouteDemoOverlay {
         turnIcon.setBackgroundTintList(ColorStateList.valueOf(color(on ? R.color.on_primary : R.color.primary)));
         style(turnIcon, on ? R.style.TextAppearance_App_StepSymbol : R.style.TextAppearance_App_Headline,
                 on ? R.color.primary : R.color.on_primary);
+        instruction.removeCallbacks(fitArrival);
+        instructionSizePx = 0f;
         style(instruction, on ? R.style.TextAppearance_App_Headline : R.style.TextAppearance_App_TitleLarge,
                 on ? R.color.on_primary : R.color.on_primary_container);
+        if (arrived) {
+            instructionSizePx = instruction.getTextSize();
+            instruction.post(fitArrival);
+        }
         style(remaining, on ? R.style.TextAppearance_App_Title : R.style.TextAppearance_App_Body,
                 on ? R.color.on_primary : R.color.on_primary_container);
+    }
+
+    /** Turn instructions: up to two lines at the panel's own size. */
+    private void showInstruction(String text) {
+        if (instructionSizePx > 0f) {
+            instruction.removeCallbacks(fitArrival);
+            instruction.setTextSize(TypedValue.COMPLEX_UNIT_PX, instructionSizePx);
+            instructionSizePx = 0f;
+        }
+        instruction.setMaxLines(2);
+        instruction.setEllipsize(null);
+        instruction.setText(text);
+    }
+
+    /** "○○에 도착했습니다." on one line, smaller when a long name would not fit otherwise. */
+    private void showArrival(String text) {
+        if (instructionSizePx == 0f) instructionSizePx = instruction.getTextSize();
+        boolean changed = !text.contentEquals(instruction.getText());
+        instruction.setMaxLines(1);
+        instruction.setEllipsize(TextUtils.TruncateAt.END);
+        instruction.setText(text);
+        if (changed) {
+            instruction.removeCallbacks(fitArrival);
+            instruction.post(fitArrival); // After layout, when the width is known.
+        }
+    }
+
+    private void fitArrivalOnOneLine() {
+        int width = instruction.getWidth()
+                - instruction.getPaddingLeft() - instruction.getPaddingRight();
+        if (width <= 0 || instructionSizePx <= 0f) return;
+        CharSequence text = instruction.getText();
+        Paint paint = new Paint(instruction.getPaint());
+        float step = TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_SP, 1f, instruction.getResources().getDisplayMetrics());
+        float min = instructionSizePx * 0.5f; // Below this the end is cut with "…" instead.
+        float size = instructionSizePx;
+        paint.setTextSize(size);
+        while (size - step >= min && paint.measureText(text, 0, text.length()) > width) {
+            size -= step;
+            paint.setTextSize(size);
+        }
+        instruction.setTextSize(TypedValue.COMPLEX_UNIT_PX, size);
     }
 
     private void style(TextView view, @StyleRes int appearance, @ColorRes int textColor) {
@@ -205,7 +265,8 @@ public final class RouteDemoOverlay {
     private void render() {
         if (route == null) return;
         Context context = root.getContext();
-        map.setProgress(meters);
+        // Covered (for example by the status screen): no redraw, the position still advances.
+        if (root.isShown()) map.setProgress(meters);
 
         float left = route.lengthMeters() - meters;
         int minutes = (int) Math.ceil(left / 1000f / CITY_SPEED_KPH * 60f);
@@ -216,16 +277,14 @@ public final class RouteDemoOverlay {
         if (videoMode) speakDue();
         if (left <= 1f) {
             turnIcon.setText("●");
-            instruction.setText(context.getString(R.string.route_demo_arrived, destinationName));
-            if (!arrived) {
-                arrived = true;
-                if (!videoMode) speaker.say(instruction.getText().toString());
-            }
+            showArrival(context.getString(R.string.route_demo_arrived, destinationName));
+            // Arrival shows on screen only; it is not read aloud.
+            arrived = true;
             return;
         }
         if (next == null) {
             turnIcon.setText("↑");
-            instruction.setText(context.getString(
+            showInstruction(context.getString(
                     R.string.route_demo_destination_ahead, formatDistance(context, left)));
             return;
         }
@@ -235,7 +294,7 @@ public final class RouteDemoOverlay {
         String text = context.getString(
                 leftTurn ? R.string.route_demo_turn_left : R.string.route_demo_turn_right,
                 formatDistance(context, toTurn));
-        instruction.setText(text);
+        showInstruction(text);
         if (!videoMode && toTurn <= ANNOUNCE_METERS && announced.add(next.atMeters)) speaker.say(text);
     }
 
@@ -249,7 +308,8 @@ public final class RouteDemoOverlay {
         if (route == null) return true;
         RouteVoice.Call call = voice.due(route, meters);
         if (call == null) return true;
-        if (!speaker.say(callText(call))) return false;
+        // Arrival shows on screen only; it is not read aloud.
+        if (call.kind != RouteVoice.Kind.ARRIVED && !speaker.say(callText(call))) return false;
         voice.spoken(call);
         return voice.due(route, meters) == null;
     }

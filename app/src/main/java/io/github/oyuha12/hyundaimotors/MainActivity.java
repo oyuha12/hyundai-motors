@@ -1,6 +1,7 @@
 package io.github.oyuha12.hyundaimotors;
 
 import ai.pleos.playground.navi.data.TBTInfo;
+import android.graphics.Rect;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
@@ -77,6 +78,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView tileSpeed;
     private TextView tileGear;
     private TextView tileBrake;
+    private TextView tileCabin;
     private TextView detailLocation;
     private TextView detailCabin;
     private TextView detailReports;
@@ -94,6 +96,10 @@ public class MainActivity extends AppCompatActivity {
     private ConfirmOverlay confirmOverlay;
     private EvacuationStatusOverlay statusOverlay;
     private RouteDemoOverlay routeDemo;
+    /** The same route screen inside the situation screen, used while that screen is open. */
+    private RouteDemoOverlay inlineRoute;
+    /** The situation whose evacuation route the inline map plays, or null. */
+    @Nullable private EmergencyType inlineRouteType;
     private View drowsyBanner;
     private TextView drowsyText;
     /** Video mode stand-in for saying "신고해 줘": a double tap anywhere. */
@@ -119,6 +125,12 @@ public class MainActivity extends AppCompatActivity {
                 .inflate(R.layout.view_emergency, (ViewGroup) findViewById(android.R.id.content), false);
         addContentView(overlayView, overlayView.getLayoutParams());
         overlay = new EmergencyOverlay(overlayView, viewModel);
+        // The route screen inside the situation screen, right under the SOS button. The layout
+        // is the full-screen one, so drop what only suits a whole window.
+        View inlineRouteView = overlayView.findViewById(R.id.emergency_route_view);
+        inlineRouteView.setFitsSystemWindows(false);
+        inlineRouteView.setPadding(0, 0, 0, 0);
+        inlineRoute = new RouteDemoOverlay(inlineRouteView, viewModel::say);
 
         // Above the situation screen, below the confirmation and the demo route.
         View statusView = LayoutInflater.from(this).inflate(
@@ -159,7 +171,16 @@ public class MainActivity extends AppCompatActivity {
         });
         viewModel.getDemoRouteRequest().observe(this, facility -> {
             if (facility == null) return;
-            routeDemo.show(facility, routePins(facility));
+            if (isGuidanceScreenOpen()) {
+                // From the situation screen: right under the SOS button, scrolled into view.
+                if (routeDemo.isShowing()) routeDemo.close();
+                inlineRoute.show(facility, routePins(facility));
+                View inlineView = overlayRouteView();
+                inlineView.post(() -> inlineView.requestRectangleOnScreen(
+                        new Rect(0, 0, inlineView.getWidth(), inlineView.getHeight()), false));
+            } else {
+                routeDemo.show(facility, routePins(facility));
+            }
             viewModel.onDemoRouteShown();
         });
 
@@ -268,6 +289,7 @@ public class MainActivity extends AppCompatActivity {
         confirmOverlay.setVideoMode(on);
         statusOverlay.setVideoMode(on);
         routeDemo.setVideoMode(on);
+        inlineRoute.setVideoMode(on);
         renderFacilities();
         VehicleSnapshot latest = viewModel.getSnapshot().getValue();
         if (latest != null) renderSnapshot(latest);
@@ -282,6 +304,7 @@ public class MainActivity extends AppCompatActivity {
         tileSpeed = findViewById(R.id.tile_speed);
         tileGear = findViewById(R.id.tile_gear);
         tileBrake = findViewById(R.id.tile_brake);
+        tileCabin = findViewById(R.id.tile_cabin);
         detailPane = findViewById(R.id.detail_pane);
         detailLocation = findViewById(R.id.detail_location);
         detailCabin = findViewById(R.id.detail_cabin);
@@ -361,7 +384,6 @@ public class MainActivity extends AppCompatActivity {
                 setDetail(findViewById(R.id.detail_events), getString(R.string.event_count, count)));
         viewModel.getRouteMessage().observe(this, this::renderRouteStatus);
         viewModel.getNextTurn().observe(this, this::renderNextTurn);
-        viewModel.getDispatches().observe(this, overlay::showDispatches);
         viewModel.getVoiceStatus().observe(this, confirmOverlay::showVoiceStatus);
         viewModel.getCountdown().observe(this, confirmOverlay::showCountdown);
         viewModel.getDrowsinessAlert().observe(this, this::renderDrowsinessAlert);
@@ -424,6 +446,34 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /** The status screen shows after a report, while the situation lasts. */
+    /**
+     * The evacuation route plays under the SOS button as soon as the situation screen opens, with
+     * no button to press, and ends with the screen. Once per situation, so closing the map keeps
+     * it closed until the next one.
+     */
+    private void renderInlineRoute(@Nullable MainViewModel.ActiveEmergency confirmed) {
+        EmergencyType type = confirmed == null ? null : confirmed.type;
+        if (type == inlineRouteType) return;
+        inlineRouteType = type;
+        Facility target = type == null ? null : viewModel.evacuationTarget(type);
+        if (target == null) {
+            if (inlineRoute.isShowing()) inlineRoute.close();
+            return;
+        }
+        inlineRoute.show(target, routePins(target));
+    }
+
+    /** The situation screen is on top: confirmed, and the evacuation status screen is not shown. */
+    private boolean isGuidanceScreenOpen() {
+        MainViewModel.ActiveEmergency active = viewModel.getEmergency().getValue();
+        return active != null && active.confirmed
+                && !Boolean.TRUE.equals(viewModel.getEvacuationStatusShown().getValue());
+    }
+
+    private View overlayRouteView() {
+        return findViewById(R.id.emergency_route_view);
+    }
+
     private void renderEvacuationStatus() {
         MainViewModel.ActiveEmergency active = viewModel.getEmergency().getValue();
         boolean shown = Boolean.TRUE.equals(viewModel.getEvacuationStatusShown().getValue())
@@ -440,6 +490,7 @@ public class MainActivity extends AppCompatActivity {
         renderEvacuationStatus();
         // Video mode: the in-app route ends with the situation, so the next run starts clean.
         if (active == null && viewModel.isVideoMode() && routeDemo.isShowing()) routeDemo.close();
+        renderInlineRoute(confirmed);
         boolean normal = active == null;
         coreValue.setText(normal ? R.string.status_normal : R.string.status_alert);
         coreValue.setTextColor(ContextCompat.getColor(
@@ -458,9 +509,11 @@ public class MainActivity extends AppCompatActivity {
                 ? getString(R.string.value_unknown)
                 : getString(snapshot.brakePressed ? R.string.brake_on : R.string.brake_off));
         setDetail(detailLocation, viewModel.locationLabel(snapshot));
-        setDetail(detailCabin, snapshot.cabinTemperatureC == null
+        String cabin = snapshot.cabinTemperatureC == null
                 ? getString(R.string.value_unknown)
-                : getString(R.string.temperature_c, Math.round(snapshot.cabinTemperatureC)));
+                : getString(R.string.temperature_c, Math.round(snapshot.cabinTemperatureC));
+        tileCabin.setText(cabin);
+        setDetail(detailCabin, cabin);
     }
 
     /** The detail pane exists only in wide windows. */

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SOS report, what was heard, the report receipt, and the screen's other actions. -->
+<!-- SOS report, the evacuation route, what was heard, the report receipt, and the other actions. -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -20,6 +20,24 @@
         app:icon="@drawable/ic_sos"
         app:iconGravity="textStart"
         app:iconSize="@dimen/icon_size_large" />
+
+    <!--
+        The in-app route screen, right under the SOS button once "경로 안내" is pressed here.
+        Hidden until then; same views as the full-screen one (RouteDemoOverlay).
+    -->
+    <include
+        android:id="@+id/emergency_route_view"
+        layout="@layout/view_route_demo"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/inline_route_height"
+        android:layout_marginTop="@dimen/gap" />
+
+    <!-- The evacuation route shows at once, right under the SOS button. -->
+    <include
+        layout="@layout/view_emergency_support"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/gap" />
 
     <!-- Listening for "신고해 줘" after the last step. -->
     <TextView
