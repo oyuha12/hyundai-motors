@@ -42,6 +42,8 @@ public final class VoiceAnswerListener {
     private boolean pleosReady;
     @Nullable private SpeechRecognizer fallback;
     @Nullable private Callback pending;
+    /** Video mode: {@link #stop()} leaves the recognizer alone while it is not listening. */
+    private boolean quietWhenIdle;
 
     private final ResultListener pleosResults = new ResultListener() {
         @Override public void onReady() {}
@@ -175,9 +177,19 @@ public final class VoiceAnswerListener {
         if (callback != null) callback.onHeard(text);
     }
 
+    /**
+     * Video mode: no stop goes to an idle recognizer, so it cannot reach the speech service
+     * just as the next guidance sentence starts. Off: as before.
+     */
+    public void setQuietWhenIdle(boolean on) {
+        quietWhenIdle = on;
+    }
+
     public void stop() {
+        boolean listening = pending != null;
         pending = null;
         handler.removeCallbacksAndMessages(null);
+        if (quietWhenIdle && !listening) return;
         try {
             if (pleosReady && pleos != null) pleos.stop();
         } catch (RuntimeException error) {

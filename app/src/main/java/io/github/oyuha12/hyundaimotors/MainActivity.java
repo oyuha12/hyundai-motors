@@ -60,8 +60,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String[] VIDEO_PERMISSIONS = {
         "pleos.car.permission.TTS_SERVICE",
     };
-    /** The video menu checks the voice engine again after this, once the test sentence began. */
-    private static final long VOICE_CHECK_MILLIS = 4_000L;
+    /** The video menu checks the voice again after this, once the test sentence had time to start. */
+    private static final long VOICE_CHECK_MILLIS = 6_000L;
     /** A permission request is open; another one would be dropped. */
     private boolean permissionRequestOpen;
 
@@ -220,15 +220,15 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
-        // Voice test: reads a sentence and says which engine read it. The menu stays open.
+        // The voice status shows as the menu opens: which engine reads, and what became of the
+        // last guidance sentence. The test button is only for checking the volume; the guidance
+        // speaks by itself. The menu stays open.
         TextView voiceEngine = content.findViewById(R.id.video_voice_engine);
-        voiceEngine.setText(voiceEngineLabel(viewModel.getVoiceEngine()));
+        voiceEngine.setText(voiceStatus());
         content.findViewById(R.id.video_voice_test).setOnClickListener(view -> {
             viewModel.testVoice();
-            voiceEngine.setText(voiceEngineLabel(viewModel.getVoiceEngine()));
-            voiceEngine.postDelayed(
-                    () -> voiceEngine.setText(voiceEngineLabel(viewModel.getVoiceEngine())),
-                    VOICE_CHECK_MILLIS);
+            voiceEngine.setText(voiceStatus());
+            voiceEngine.postDelayed(() -> voiceEngine.setText(voiceStatus()), VOICE_CHECK_MILLIS);
         });
 
         AlertDialog dialog = new MaterialAlertDialogBuilder(this)
@@ -498,6 +498,42 @@ public class MainActivity extends AppCompatActivity {
         String text = turn == null ? null : Directions.nextTurn(this, turn);
         overlay.showNextTurn(text);
         statusOverlay.showNextTurn(text);
+    }
+
+    /** Two lines for the video menu: the voice engine, and what became of the last sentence. */
+    private String voiceStatus() {
+        GuidanceSpeaker.Engine engine = viewModel.getVoiceEngine();
+        String first = engine == GuidanceSpeaker.Engine.PLEOS
+                ? getString(R.string.voice_engine_pleos, getString(viewModel.isVoiceHybrid()
+                        ? R.string.voice_mode_hybrid
+                        : R.string.voice_mode_on_device))
+                : getString(voiceEngineLabel(engine));
+        return first + '\n' + getString(voiceOutcomeLabel(viewModel.getVoiceOutcome()));
+    }
+
+    @StringRes
+    private static int voiceOutcomeLabel(GuidanceSpeaker.Outcome outcome) {
+        switch (outcome) {
+            case WAITING_FOR_ENGINE:
+                return R.string.voice_outcome_waiting;
+            case PLEOS_SENT:
+                return R.string.voice_outcome_pleos_sent;
+            case PLEOS_STARTED:
+                return R.string.voice_outcome_pleos_started;
+            case PLEOS_SILENT:
+                return R.string.voice_outcome_pleos_silent;
+            case ANDROID_SENT:
+                return R.string.voice_outcome_android_sent;
+            case ANDROID_STARTED:
+                return R.string.voice_outcome_android_started;
+            case ANDROID_ERROR:
+                return R.string.voice_outcome_android_error;
+            case NO_ENGINE:
+                return R.string.voice_outcome_no_engine;
+            case NONE:
+            default:
+                return R.string.voice_outcome_none;
+        }
     }
 
     @StringRes

@@ -305,7 +305,19 @@
     <string name="video_menu_voice_test">음성 테스트</string>
     <string name="video_voice_test_phrase">음성 안내 테스트입니다. 이 목소리가 들리면 정상입니다.</string>
     <string name="voice_engine_starting">음성 엔진: 준비 중</string>
-    <string name="voice_engine_pleos">음성 엔진: Pleos 음성 합성</string>
+    <string name="voice_engine_pleos">음성 엔진: Pleos 음성 합성 (%1$s)</string>
+    <string name="voice_mode_on_device">온디바이스</string>
+    <string name="voice_mode_hybrid">하이브리드</string>
+    <!-- What became of the last sentence read aloud, shown in the video menu. -->
+    <string name="voice_outcome_none">마지막 안내 음성: 아직 없음</string>
+    <string name="voice_outcome_waiting">마지막 안내 음성: 엔진 준비를 기다리는 중</string>
+    <string name="voice_outcome_pleos_sent">마지막 안내 음성: Pleos에 보냈지만 시작 신호 없음</string>
+    <string name="voice_outcome_pleos_started">마지막 안내 음성: Pleos가 읽기 시작함</string>
+    <string name="voice_outcome_pleos_silent">마지막 안내 음성: Pleos 응답 없음, 대신 읽을 한국어 음성도 없음</string>
+    <string name="voice_outcome_android_sent">마지막 안내 음성: 안드로이드 음성에 보냈지만 시작 신호 없음</string>
+    <string name="voice_outcome_android_started">마지막 안내 음성: 안드로이드 음성이 읽기 시작함</string>
+    <string name="voice_outcome_android_error">마지막 안내 음성: 안드로이드 음성 오류</string>
+    <string name="voice_outcome_no_engine">마지막 안내 음성: 읽을 엔진이 없어 소리를 못 냄</string>
     <string name="voice_engine_android">음성 엔진: 안드로이드 기본 음성 (Pleos 음성 사용 불가)</string>
     <string name="voice_engine_android_no_korean">음성 엔진: 안드로이드 기본 음성, 한국어 음성 없음</string>
     <string name="voice_engine_none">음성 엔진: 쓸 수 있는 엔진 없음</string>
