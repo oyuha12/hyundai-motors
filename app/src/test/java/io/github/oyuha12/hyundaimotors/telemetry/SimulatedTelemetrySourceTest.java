@@ -116,6 +116,8 @@ public class SimulatedTelemetrySourceTest {
     public void stopRequest_isIgnoredByExistingScenarios() {
         for (Scenario scenario : Scenario.values()) {
             if (scenario == Scenario.VIDEO_ACCELERATION || scenario == Scenario.VIDEO_FIRE) continue;
+            // The home demo scenarios pull over on purpose (HomeDemoScenarioTest).
+            if (scenario.name().startsWith("DEMO_")) continue;
             for (long t = 0; t <= 20_000L; t += 250L) {
                 assertSameVehicle(scenario + " at " + t,
                         SimulatedTelemetrySource.snapshotAt(scenario, t, t),

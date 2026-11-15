@@ -57,15 +57,6 @@
                 android:layout_height="wrap_content"
                 android:textAppearance="@style/TextAppearance.App.Body" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/evacuation_route"
-                style="@style/Widget.App.Button.Route"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/gap_large"
-                android:text="@string/evacuation_route"
-                app:icon="@drawable/ic_directions" />
-
             <TextView
                 android:id="@+id/emergency_route_status"
                 android:layout_width="match_parent"
@@ -84,38 +75,6 @@
                 android:textAppearance="@style/TextAppearance.App.Label"
                 android:textColor="@color/on_surface_variant"
                 android:visibility="gone" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-    <com.google.android.material.card.MaterialCardView
-        style="@style/Widget.App.Card"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/gap">
-
-        <LinearLayout style="@style/Widget.App.CardContent">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/responders_title"
-                android:textAppearance="@style/TextAppearance.App.Title"
-                android:textColor="@color/on_surface" />
-
-            <TextView
-                android:id="@+id/responders_notice"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/gap_small"
-                android:text="@string/responders_notice"
-                android:textAppearance="@style/TextAppearance.App.BodySecondary" />
-
-            <LinearLayout
-                android:id="@+id/support_facility_list"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/gap"
-                android:orientation="vertical" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 </LinearLayout>

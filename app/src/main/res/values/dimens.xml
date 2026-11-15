@@ -19,6 +19,8 @@
     <dimen name="status_map_min_height">320dp</dimen>
     <!-- The SOS report button: the largest action on the situation screen. -->
     <dimen name="sos_button_height">128dp</dimen>
+    <!-- The route screen inside the situation screen: map, next turn and controls. -->
+    <dimen name="inline_route_height">560dp</dimen>
     <!-- Label column of the report receipt. -->
     <dimen name="receipt_label_width">200dp</dimen>
     <!-- Pleos system popup: centered card, side padding grows with the window. -->

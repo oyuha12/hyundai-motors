@@ -2,7 +2,6 @@ package io.github.oyuha12.hyundaimotors;
 
 import android.content.Context;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.Nullable;
@@ -17,16 +16,15 @@ import io.github.oyuha12.hyundaimotors.facility.Facility;
 import io.github.oyuha12.hyundaimotors.report.MockEmergencyReporter;
 import io.github.oyuha12.hyundaimotors.report.ReportReceipt;
 import java.text.SimpleDateFormat;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 /**
- * Situation screen: one instruction at a time, the SOS report button and its receipt, the
- * evacuation route and nearby help. Narrow windows stack the parts; layout-w840dp places them
- * side by side. Reports are mock records only.
+ * Situation screen: one instruction at a time, the SOS report button with the evacuation route
+ * right under it, and the report receipt. Responders and their arrival times are on the
+ * evacuation and dispatch status screen instead. Narrow windows stack the parts; layout-w840dp
+ * places them side by side. Reports are mock records only.
  */
 final class EmergencyOverlay {
     private final View root;
@@ -44,14 +42,10 @@ final class EmergencyOverlay {
     private final TextView evacuationInstruction;
     private final TextView evacuationName;
     private final TextView evacuationDetail;
-    private final View evacuationRoute;
-    private final ViewGroup facilityList;
-    private Map<String, Long> dispatched = Collections.emptyMap();
     private final ImageView stepIcon;
     private final StepAnimator stepAnimator;
     private final View mockBanner;
     private final MaterialButton reportButton;
-    private final TextView respondersNotice;
     private final View waitingForStop;
     private final TextView reportVoiceStatus;
     private final TextView heard;
@@ -82,13 +76,10 @@ final class EmergencyOverlay {
         evacuationInstruction = root.findViewById(R.id.evacuation_instruction);
         evacuationName = root.findViewById(R.id.evacuation_name);
         evacuationDetail = root.findViewById(R.id.evacuation_detail);
-        evacuationRoute = root.findViewById(R.id.evacuation_route);
-        facilityList = root.findViewById(R.id.support_facility_list);
         stepIcon = root.findViewById(R.id.emergency_step_icon);
         stepAnimator = new StepAnimator(root.findViewById(R.id.emergency_step_visual));
         mockBanner = root.findViewById(R.id.emergency_mock_banner);
         reportButton = root.findViewById(R.id.emergency_report);
-        respondersNotice = root.findViewById(R.id.responders_notice);
         waitingForStop = root.findViewById(R.id.emergency_waiting_for_stop);
         reportVoiceStatus = root.findViewById(R.id.report_voice_status);
         heard = root.findViewById(R.id.report_heard);
@@ -119,22 +110,16 @@ final class EmergencyOverlay {
                 VideoWording.pick(EmergencyPlan.evacuationInstruction(active.type), videoMode));
         evacuationIcon.setImageResource(FacilityUi.icon(EmergencyPlan.evacuationTarget(active.type)));
 
+        // The route map under the SOS button plays this by itself (MainActivity), so no button.
         Facility target = viewModel.evacuationTarget(active.type);
-        evacuationRoute.setEnabled(target != null);
         if (target != null) {
             evacuationName.setText(target.name);
             evacuationDetail.setText(Directions.describe(root.getContext(), target));
-            evacuationRoute.setOnClickListener(v -> viewModel.navigateTo(target));
         } else {
             // Video mode before the real places are set (VideoConfig TODO).
             evacuationName.setText(R.string.place_unset);
             evacuationDetail.setText(R.string.value_none);
-            evacuationRoute.setOnClickListener(null);
         }
-
-        FacilityUi.fillList(facilityList, viewModel.supportFacilities(active.type),
-                viewModel::navigateTo, viewModel::requestDispatch, videoMode);
-        showDispatches(viewModel.getDispatches().getValue());
     }
 
     void showStep(@Nullable Integer index) {
@@ -169,7 +154,6 @@ final class EmergencyOverlay {
         ((TextView) root.findViewById(R.id.evacuation_title))
                 .setText(VideoWording.pick(R.string.evacuation_title, on));
         updateReportButton();
-        respondersNotice.setText(VideoWording.pick(R.string.responders_notice, on));
     }
 
     /** The receipt once a report is recorded: 112 and 119, and what was passed on. */
@@ -213,7 +197,6 @@ final class EmergencyOverlay {
         if (visible) reportVoiceStatus.setText(message);
     }
 
-
     /** Motion runs only while parked and while the screen is visible. */
     void setMotionAllowed(boolean allowed) {
         motionAllowed = allowed;
@@ -240,21 +223,4 @@ final class EmergencyOverlay {
         reportStatus.setText(root.getContext().getString(
                 VideoWording.pick(R.string.mock_dispatch_done, videoMode), report.facilityName));
     }
-
-    /** Refreshes arrival estimates and, once a request is made, counts down every second. */
-    void showDispatches(@Nullable Map<String, Long> dispatched) {
-        this.dispatched = dispatched == null ? Collections.emptyMap() : dispatched;
-        root.removeCallbacks(countdownTick);
-        countdownTick.run();
-    }
-
-    private final Runnable countdownTick = new Runnable() {
-        @Override
-        public void run() {
-            FacilityUi.updateArrivals(facilityList, dispatched, videoMode);
-            if (!dispatched.isEmpty() && root.getVisibility() == View.VISIBLE) {
-                root.postDelayed(this, 1_000L);
-            }
-        }
-    };
 }

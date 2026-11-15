@@ -156,7 +156,7 @@ public final class GuidanceSpeaker {
                     handler.post(() -> {
                         if (pleos != engine) return;
                         engine.addEventListener(pleosEvents);
-                        engine.setLocale(Locale.KOREAN);
+                        engine.setLocale(Locale.KOREA);
                         pleosReady = true;
                         pleosState = State.READY;
                         Log.i(TAG, "Pleos TTS ready (" + mode + ")");
@@ -390,6 +390,16 @@ public final class GuidanceSpeaker {
         return pendingText != null
                 && speakingSince > 0L
                 && SystemClock.elapsedRealtime() - speakingSince < BUSY_MAX_MILLIS;
+    }
+
+    /**
+     * A sentence went to an engine and has not finished, for at most maxMillis since then.
+     * Timers that would cut it off wait for this instead, as a slow device can start late.
+     */
+    public boolean isReading(long maxMillis) {
+        return pendingText != null
+                && speakingSince > 0L
+                && SystemClock.elapsedRealtime() - speakingSince < maxMillis;
     }
 
     /** Which engine the next sentence goes to. */

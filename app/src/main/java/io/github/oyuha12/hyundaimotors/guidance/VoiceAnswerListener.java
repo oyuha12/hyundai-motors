@@ -120,7 +120,7 @@ public final class VoiceAnswerListener {
                 public void onSuccess() {
                     handler.post(() -> {
                         pleos.addListener(pleosResults);
-                        pleos.setLocale(Locale.KOREAN);
+                        pleos.setLocale(Locale.KOREA);
                         pleosReady = true;
                     });
                 }

@@ -18,6 +18,7 @@ import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 import io.github.oyuha12.hyundaimotors.data.FakeDrivingStateSource;
 import io.github.oyuha12.hyundaimotors.demo.AutoRoute;
+import io.github.oyuha12.hyundaimotors.demo.HomeDemo;
 import io.github.oyuha12.hyundaimotors.demo.VideoConfig;
 import io.github.oyuha12.hyundaimotors.demo.VideoMode;
 import io.github.oyuha12.hyundaimotors.demo.VideoPlace;
@@ -100,6 +101,13 @@ public final class MainViewModel extends AndroidViewModel {
     }
 
     private static final long MAX_STEP_MILLIS = 10_000L;
+    /**
+     * A timer that would cut off a sentence the engine is still reading waits for it, checking
+     * every READING_CHECK_MILLIS, up to MAX_READING_MILLIS after the sentence started. On a slow
+     * device (a PC emulator) synthesis can start seconds late, and cutting it off sounded choppy.
+     */
+    private static final long MAX_READING_MILLIS = 20_000L;
+    private static final long READING_CHECK_MILLIS = 500L;
     private static final long STEP_PAUSE_MILLIS = 700L;
     /** Starts listening even if the question's "speech finished" event never arrives. */
     private static final long MAX_QUESTION_MILLIS = 8_000L;
@@ -167,11 +175,16 @@ public final class MainViewModel extends AndroidViewModel {
 
     private TelemetrySource vehicleSource;
     @Nullable private SimulatedTelemetrySource simulation;
+    /** The car's own last reading, shown again when a simulation ends. */
+    @Nullable private VehicleSnapshot lastVehicleReading;
+    /** Home demo: the situation to ask about once its values have built up (HomeDemo). */
+    @Nullable private EmergencyType buildUpType;
+    private final Runnable buildUpQuestion = this::askAfterBuildUp;
     @Nullable private EmergencyType dismissed;
-    private final Runnable stepTimeout = this::advanceStep;
+    private final Runnable stepTimeout = this::onStepTimeout;
     private final Runnable countdownTick = this::tickCountdown;
-    private final Runnable reportPromptTimeout = this::onReportPromptSpoken;
-    private final Runnable reportAnnounceTimeout = this::onReportAnnounced;
+    private final Runnable reportPromptTimeout = this::onReportPromptTimeout;
+    private final Runnable reportAnnounceTimeout = this::onReportAnnounceTimeout;
     private final Runnable announcedReport = this::fileAnnouncedReport;
     /** Read just before the first step, then cleared. */
     @Nullable private String guidanceLead;
@@ -249,6 +262,7 @@ public final class MainViewModel extends AndroidViewModel {
             // the SDK says.
             GeoPoint position = GeoPoint.of(reading);
             if (position != null) lastSdkPosition = position;
+            lastVehicleReading = reading;
             if (simulation == null) onReading(reading);
         });
     }
@@ -268,6 +282,9 @@ public final class MainViewModel extends AndroidViewModel {
         drivingBySpeed = VideoMode.isDrivingBySpeed(reading.speedKph);
         boolean video = isVideoMode();
         if (video) refreshDriving();
+        // Home demo build-up: the values are staged, so no detection or reminder answers them.
+        // The button asks once, after HomeDemo.BUILD_UP_MILLIS.
+        if (isBuildUpRunning()) return;
         Detection detected = detector.evaluate(reading);
         ActiveEmergency current = emergency.getValue();
 
@@ -289,10 +306,36 @@ public final class MainViewModel extends AndroidViewModel {
 
     // ---- Confirmation -------------------------------------------------------------------------
 
-    /** A situation button was pressed. Asks first, like a detection does. */
+    /**
+     * A situation button was pressed. Asks first, like a detection does. Outside video mode the
+     * 급발진 and 화재 buttons first play the values building up (HomeDemo), then ask.
+     */
     public void selectEmergency(EmergencyType type) {
-        stopSimulation();
+        SimulatedTelemetrySource.Scenario buildUp = HomeDemo.buildUp(type, isVideoMode());
+        if (buildUp != null) {
+            startBuildUp(type, buildUp);
+            return;
+        }
+        // The cruise goes on under the question; it pulls over once the guidance starts.
+        if (!isCruising()) stopSimulation();
         askToConfirm(new ActiveEmergency(type, R.string.reason_manual, false, false));
+    }
+
+    private void startBuildUp(EmergencyType type, SimulatedTelemetrySource.Scenario scenario) {
+        float speed = currentSpeed();
+        stopAllSpeech(); // Also drops an earlier build-up still waiting to ask.
+        sequencer.stop();
+        startSimulation(scenario, 0L, speed);
+        buildUpType = type;
+        handler.postDelayed(buildUpQuestion, HomeDemo.BUILD_UP_MILLIS);
+    }
+
+    private void askAfterBuildUp() {
+        EmergencyType type = buildUpType;
+        buildUpType = null;
+        if (type == null || emergency.getValue() != null) return;
+        // The staged values keep going under the question and the guidance.
+        askToConfirm(new ActiveEmergency(type, HomeDemo.reason(type), false, false));
     }
 
     private void askToConfirm(ActiveEmergency pending) {
@@ -313,8 +356,9 @@ public final class MainViewModel extends AndroidViewModel {
         ask(pending.detected
                 ? getApplication().getString(
                         R.string.confirm_prompt_detected, suspectedSubject(pending.type))
-                : getApplication().getString(R.string.confirm_prompt_manual,
-                        getApplication().getString(EmergencyPlan.title(pending.type))));
+                // A situation button: "급발진이 감지되었습니다." The particle follows the name.
+                : getApplication().getString(
+                        R.string.confirm_prompt_manual, suspectedSubject(pending.type)));
         if (pending.detected) {
             saveEventRecord(pending);
             countdown.setValue(NO_ANSWER_SECONDS);
@@ -353,7 +397,18 @@ public final class MainViewModel extends AndroidViewModel {
         voiceStatus.setValue(R.string.voice_asking);
         Runnable listen = () -> listenForAnswer(id);
         speaker.speak(question, () -> handler.post(listen));
-        handler.postDelayed(listen, MAX_QUESTION_MILLIS);
+        // Never opens the microphone over the question while it is still being read.
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (id != questionId) return;
+                if (speaker.isReading(MAX_READING_MILLIS)) {
+                    handler.postDelayed(this, READING_CHECK_MILLIS);
+                } else {
+                    listen.run();
+                }
+            }
+        }, MAX_QUESTION_MILLIS);
     }
 
     private void listenForAnswer(int id) {
@@ -433,6 +488,8 @@ public final class MainViewModel extends AndroidViewModel {
             reportFlow.markReported();
         }
         guidanceLead = lead;
+        // Home demo: a cruising car pulls over once a situation is confirmed.
+        if (isCruising()) simulation.startStopping();
         sequencer.start(EmergencyPlan.steps(confirmed.type));
         autoRoute(AutoRoute.ON_CONFIRM);
     }
@@ -457,6 +514,30 @@ public final class MainViewModel extends AndroidViewModel {
             handler.postDelayed(stepTimeout, STEP_PAUSE_MILLIS);
         });
         handler.postDelayed(stepTimeout, MAX_STEP_MILLIS);
+    }
+
+    /** The step's time is up: the next step, unless the voice is still reading this one. */
+    private void onStepTimeout() {
+        if (waitWhileReading(stepTimeout)) return;
+        advanceStep();
+    }
+
+    private void onReportPromptTimeout() {
+        if (waitWhileReading(reportPromptTimeout)) return;
+        onReportPromptSpoken();
+    }
+
+    private void onReportAnnounceTimeout() {
+        if (waitWhileReading(reportAnnounceTimeout)) return;
+        onReportAnnounced();
+    }
+
+    /** Checks again shortly, instead of cutting off a sentence still being read. */
+    private boolean waitWhileReading(Runnable timer) {
+        if (!speaker.isReading(MAX_READING_MILLIS)) return false;
+        handler.removeCallbacks(timer);
+        handler.postDelayed(timer, READING_CHECK_MILLIS);
+        return true;
     }
 
     /** The step was read: the next one, or first wait for the car to stop. */
@@ -507,7 +588,9 @@ public final class MainViewModel extends AndroidViewModel {
         lastReport.setValue(null);
         dispatches.setValue(Collections.emptyMap());
         normalSince = -1L;
+        float speed = currentSpeed();
         stopSimulation();
+        continueAfterSimulation(speed);
         if (announcement != 0) speaker.speak(getApplication().getString(announcement), null);
     }
 
@@ -701,6 +784,11 @@ public final class MainViewModel extends AndroidViewModel {
     }
 
     private void startSimulation(SimulatedTelemetrySource.Scenario scenario, long leadInMillis) {
+        startSimulation(scenario, leadInMillis, 0f);
+    }
+
+    private void startSimulation(
+            SimulatedTelemetrySource.Scenario scenario, long leadInMillis, float baseSpeedKph) {
         stopSimulation();
         detector.reset();
         dismissed = null;
@@ -709,14 +797,57 @@ public final class MainViewModel extends AndroidViewModel {
             drowsiness.setConfig(DrowsinessMonitor.DEMO);
         }
         simulation = new SimulatedTelemetrySource(scenario, leadInMillis,
-                () -> VideoMode.simulationPosition(isVideoMode(), lastSdkPosition));
+                () -> VideoMode.simulationPosition(isVideoMode(), lastSdkPosition), baseSpeedKph);
         simulation.start(this::onReading);
     }
 
     /** Ends a running demo, for example the drowsiness one, which never ends by itself. */
     public void stopScenario() {
-        stopSimulation();
+        endSimulation();
         drowsinessAlert.setValue(0);
+    }
+
+    /**
+     * Ends a simulation. While "주행 중" is on outside video mode the cruise takes over from the
+     * current speed; otherwise the car's own reading shows again instead of the last staged one.
+     */
+    private void endSimulation() {
+        float speed = currentSpeed();
+        stopSimulation();
+        continueAfterSimulation(speed);
+    }
+
+    /** After a simulation stopped: the cruise from that speed, or the car's own reading. */
+    private void continueAfterSimulation(float speed) {
+        if (shouldCruise()) {
+            startSimulation(SimulatedTelemetrySource.Scenario.DEMO_CRUISE, 0L, speed);
+        } else {
+            // Posted: this can run inside onReading, which should finish first.
+            handler.post(this::showVehicleReading);
+        }
+    }
+
+    private void showVehicleReading() {
+        if (simulation == null && lastVehicleReading != null) onReading(lastVehicleReading);
+    }
+
+    /** Home demo: "주행으로 전환" is on, outside video mode. */
+    private boolean shouldCruise() {
+        return !isVideoMode() && Boolean.TRUE.equals(drivingState.isDriving().getValue());
+    }
+
+    private boolean isCruising() {
+        return simulation != null
+                && simulation.scenario() == SimulatedTelemetrySource.Scenario.DEMO_CRUISE;
+    }
+
+    private boolean isBuildUpRunning() {
+        return simulation != null && HomeDemo.isBuildUp(simulation.scenario());
+    }
+
+    private float currentSpeed() {
+        VehicleSnapshot reading = snapshot.getValue();
+        return reading != null && reading.speedKph != null ? reading.speedKph : 0f;
     }
 
     private void stopSimulation() {
@@ -1024,6 +1155,8 @@ public final class MainViewModel extends AndroidViewModel {
         demoPrefs().edit().putBoolean(KEY_VIDEO_MODE, on).apply();
         stopScenario();
         videoMode.setValue(on);
+        // Video mode plays its own scenarios; the home demo cruise does not carry over.
+        if (on) stopSimulation();
         speaker.setVideoMode(on);
         voice.setQuietWhenIdle(on);
     }
@@ -1154,8 +1287,21 @@ public final class MainViewModel extends AndroidViewModel {
         return driving;
     }
 
+    /**
+     * The test toggle. Outside video mode it also plays a cruising speed while driving, and the
+     * car's own reading again once parked. A running test scenario is left alone.
+     */
     public void toggleDriving() {
         drivingState.toggle();
+        if (isVideoMode()) return;
+        if (shouldCruise()) {
+            if (simulation == null) {
+                startSimulation(SimulatedTelemetrySource.Scenario.DEMO_CRUISE, 0L, currentSpeed());
+            }
+        } else if (isCruising()) {
+            stopSimulation();
+            showVehicleReading();
+        }
     }
 
     @IdRes
