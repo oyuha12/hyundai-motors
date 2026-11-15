@@ -1,6 +1,24 @@
-# hyundai-motors
+# RoadAlert
 
-현대자동차그룹 차량용 앱 개발 공모전 출품용 Pleos Connect 앱입니다. 급발진, 사고, 화재, 침수 상황을 진단하거나 직접 선택하면 대처 방법을 화면과 음성으로 안내하고, 대피 경로와 주변 도움 시설을 보여 줍니다.
+> 차량 데이터로 급발진·사고·화재를 감지하고, 음성과 그림으로 대처 방법과 대피 경로를 안내하는 Pleos Connect 긴급상황 대처 앱
+
+## 제출 정보 (현대자동차그룹 차량용 앱 개발 공모전)
+
+| 항목 | 내용 |
+|---|---|
+| 팀명 | RIVerse |
+| 앱 이름 | RoadAlert |
+| 한 줄 소개 | 위급상황을 감지해 음성으로 확인한 뒤, 단계별 대처 방법과 대피 경로, 신고를 안내하는 차량용 앱 |
+| APK | [`apk/RIVerse_RoadAlert_release.apk`](apk/RIVerse_RoadAlert_release.apk) (release 빌드, 서명됨) |
+| 에뮬레이터 | Pleos Connect Emulator v2.1.0 (Android 14, API 34, Automotive) |
+| 화면 규격 | ○○○○ x ○○○ px, ○○○ dpi |
+| AVD 설정 | Default boot: Cold, RAM: 4 GB |
+
+빠른 시연: APK를 설치한 뒤 홈의 **위급 상황 직접 선택** 버튼이나 **진단 테스트** 탭의 시나리오 버튼을 누르세요. 자세한 내용은 [실행 방법](#실행-방법)과 [시연 방법](#시연-방법)에 있습니다.
+
+---
+
+RoadAlert는 급발진, 사고, 화재, 침수 상황을 진단하거나 직접 선택하면 대처 방법을 화면과 음성으로 안내하고, 대피 경로와 주변 도움 시설을 보여 줍니다.
 
 > 시연용 프로토타입입니다. 진단 기준은 실차로 검증되지 않았고 안전 장치를 대신하지 않습니다. 신고 버튼은 앱 안에만 기록하는 임시 기능이며 전화, 문자, 네트워크로 아무것도 보내지 않습니다. 주변 시설은 실제로 존재하지 않는 샘플 데이터입니다.
 
@@ -36,7 +54,9 @@
 
 자동 감지된 급발진·화재가 5초 이상 정상으로 돌아오면 처음 화면으로 돌아갑니다. 사고는 차가 멈춘 것이 정상이라는 뜻이 아니므로 자동으로 닫히지 않습니다. 음성 인식은 Pleos SpeechToText를 먼저 쓰고, 실패하면 Android 음성 인식을 쓰고, 둘 다 없으면 버튼만 표시합니다. 답변 해석은 `AnswerClassifier.java`에 있습니다.
 
-## 팀 대처 방법 표 반영 (`사고 발생, 대처방법.xlsx`)
+## 팀 대처 방법 표 반영
+
+팀 내부 자료(`사고 발생, 대처방법.xlsx`)의 사고 유형별 대처 방법을 앱에 반영했습니다.
 
 | 표의 사고 종류 | 앱 반영 | 감지 방법 |
 |---|---|---|
@@ -89,6 +109,42 @@
 | 경로 | Pleos NaviHelper SDK |
 | 음성 | Pleos TextToSpeech SDK, 실패 시 Android TTS |
 
+## 테스트 환경
+
+| 항목 | 값 |
+|---|---|
+| 에뮬레이터 | Pleos Connect Emulator v2.1.0 |
+| 시스템 이미지 | Pleos Connect v2.1.0 APIs (Android 14, API 34) |
+| 기기 유형 | Automotive |
+| 화면 규격 | ○○○○ x ○○○ px, ○○○ dpi |
+| AVD 설정 | Default boot: Cold (Quick boot에서는 차량 데이터 VHAL이 동작하지 않음), RAM: 4 GB |
+| 권한 | `pleos.car.permission.TTS_SERVICE` 등 매니페스트에 선언된 권한 (런타임 승인 불필요) |
+| 음성 인식 테스트 | 에뮬레이터 Extended Controls > Microphone에서 마이크 입력 허용 |
+
+## 개발 환경
+
+| 항목 | 값 |
+|---|---|
+| Android Studio | 2026.2.2 |
+| Gradle / AGP | 9.9.0 / 9.5.1 |
+| 언어 / UI | Java 17 / XML 레이아웃 (Material 3) |
+| minSdk / targetSdk / compileSdk | 28 / 35 / 37 |
+| Gradle JDK | Android Studio 내장 JBR |
+
+프로젝트 경로에 한글을 넣지 마세요. 버전은 `gradle/libs.versions.toml`에서 관리합니다.
+
+## 실행 방법
+
+### APK로 실행하기
+1. [Pleos Connect Emulator](https://document.pleos.ai/docs/connect/guide/getting-started/application-development/setup-connect-sdk-emulator)를 설치하고, 위 [테스트 환경](#테스트-환경)대로 AVD를 만들어 실행합니다.
+2. APK를 설치합니다: `adb install -r apk/RIVerse_RoadAlert_release.apk`
+3. 런처에서 **RoadAlert** 앱을 실행합니다.
+
+### 소스로 실행하기
+1. Android Studio로 저장소를 열고 Gradle 동기화를 기다립니다.
+2. Pleos Connect Emulator AVD를 실행합니다.
+3. `app`을 Run 합니다.
+
 ## 시연 방법
 
 - **직접 선택:** 홈의 급발진·사고·화재·침수 버튼
@@ -126,24 +182,6 @@ PC 에뮬레이터의 내비게이션 앱은 지도를 불러오지 못합니다
   - "상황 종료"를 누르면 신고, 도착 카운트다운, 시뮬레이션, 우리가 요청한 내비 경로, 대체 경로 화면이 모두 정리되어 다음 촬영이 처음부터 같게 진행됩니다.
 
 코드: `demo/DemoRoute.java`(경로 생성), `demo/RouteMapView.java`(지도 그리기), `demo/FirstPersonCamera.java`(영상 모드 1인칭 시점), `demo/RouteVoice.java`(영상 모드 경로 음성), `demo/RouteDemoOverlay.java`(재생과 안내)
-
-## 개발 환경
-
-| 항목 | 값 |
-|---|---|
-| Android Studio | 2026.2.2 |
-| Gradle / AGP | 9.9.0 / 9.5.1 |
-| 언어 / UI | Java 17 / XML 레이아웃 (Material 3) |
-| minSdk / targetSdk / compileSdk | 28 / 35 / 37 |
-| Gradle JDK | Android Studio 내장 JBR |
-
-프로젝트 경로에 한글을 넣지 마세요. 버전은 `gradle/libs.versions.toml`에서 관리합니다.
-
-## 실행 방법
-
-1. Android Studio로 저장소를 열고 Gradle 동기화를 기다립니다.
-2. [Pleos Connect Emulator](https://document.pleos.ai/docs/connect/guide/getting-started/application-development/setup-connect-sdk-emulator)를 설치하고 AVD를 실행합니다.
-3. `app`을 Run 합니다.
 
 ## 디자인 기준
 
@@ -197,15 +235,20 @@ Pleos 가이드의 "운전 중 애니메이션으로 시선을 유도하지 않�
 | `res/values/themes.xml`, `colors.xml`, `dimens.xml` | 색상, 글자 크기, 터치 영역 |
 | `res/values/strings.xml` | 화면 문구 |
 
-## 임시로 둔 부분
+## 한계 및 향후 계획
 
-- 주행 상태는 화면의 전환 버튼으로 바꿉니다. 제출 전에 `CarUxRestrictionsManager` 구현으로 교체하고 버튼을 지워야 합니다.
-- `SampleFacilityRepository`의 시설은 가상 데이터입니다. 실제 장소 검색 API로 교체해야 합니다.
-- `MockEmergencyReporter`는 기록만 합니다. 실제 신고 연동은 구현하지 않았고, 전화·문자 코드가 들어가면 `ManifestSafetyTest`가 실패합니다.
-- 대처 문구는 일반 안내입니다. 대상 차량 취급설명서와 전문가 검토가 필요합니다.
-- 진단은 앱이 실행 중일 때만 동작합니다.
-- 색상과 크기는 Pleos 공식 디자인 토큰이 아닙니다.
+| 현재 (프로토타입) | 향후 계획 |
+|---|---|
+| 주행/정차 상태를 화면의 전환 버튼으로 바꿈 | `CarUxRestrictionsManager`로 실제 주행 상태를 받아 자동 전환 |
+| `SampleFacilityRepository`의 시설은 가상 데이터 | 실제 장소 검색 API로 교체 |
+| `MockEmergencyReporter`는 앱 안에 기록만 함. 전화·문자 코드가 들어가면 `ManifestSafetyTest`가 실패하도록 막아 둠 | 119 신고 체계, 한국도로공사 긴급견인 연동 |
+| 대처 문구는 일반 안내 | 대상 차량 취급설명서와 전문가 검토 반영 |
+| 진단은 앱이 실행 중일 때만 동작 | 백그라운드 감지 서비스로 확장 |
+| 실내 온도, 경고등은 에뮬레이터에서 값이 오지 않음 | 실차 환경에서 검증 |
+| 색상과 크기는 Pleos 공식 디자인 토큰이 아님 | 공식 디자인 토큰 적용 |
 
 ## APK
 
-제출용 APK는 `apk/팀명_앱이름_release.apk`로 저장합니다. keystore와 시크릿은 커밋하지 마세요.
+- 제출용 APK: [`apk/RIVerse_RoadAlert_release.apk`](apk/RIVerse_RoadAlert_release.apk)
+- release 빌드이며 서명되어 있습니다.
+- keystore와 시크릿은 저장소에 포함하지 않습니다.
