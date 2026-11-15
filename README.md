@@ -11,7 +11,7 @@
 | 한 줄 소개 | 위급상황을 감지해 음성으로 확인한 뒤, 단계별 대처 방법과 대피 경로, 신고를 안내하는 차량용 앱 |
 | APK | [`apk/RIVerse_RoadAlert_release.apk`](apk/RIVerse_RoadAlert_release.apk) (release 빌드, 서명됨) |
 | 에뮬레이터 | Pleos Connect Emulator v2.1.0 (Android 14, API 34, Automotive) |
-| 화면 규격 | ○○○○ x ○○○ px, ○○○ dpi |
+| 화면 규격 | Pleos Connect v2.1.0 AVD 기본 화면 설정 (16:9, 변경 없음) |
 | AVD 설정 | Default boot: Cold, RAM: 4 GB |
 
 빠른 시연: APK를 설치한 뒤 홈의 **위급 상황 직접 선택** 버튼이나 **진단 테스트** 탭의 시나리오 버튼을 누르세요. 자세한 내용은 [실행 방법](#실행-방법)과 [시연 방법](#시연-방법)에 있습니다.
@@ -116,7 +116,7 @@ RoadAlert는 급발진, 사고, 화재, 침수 상황을 진단하거나 직접 
 | 에뮬레이터 | Pleos Connect Emulator v2.1.0 |
 | 시스템 이미지 | Pleos Connect v2.1.0 APIs (Android 14, API 34) |
 | 기기 유형 | Automotive |
-| 화면 규격 | ○○○○ x ○○○ px, ○○○ dpi |
+| 화면 규격 | Pleos Connect v2.1.0 AVD 기본 화면 설정 (16:9, 변경 없음) |
 | AVD 설정 | Default boot: Cold (Quick boot에서는 차량 데이터 VHAL이 동작하지 않음), RAM: 4 GB |
 | 권한 | `pleos.car.permission.TTS_SERVICE` 등 매니페스트에 선언된 권한 (런타임 승인 불필요) |
 | 음성 인식 테스트 | 에뮬레이터 Extended Controls > Microphone에서 마이크 입력 허용 |
